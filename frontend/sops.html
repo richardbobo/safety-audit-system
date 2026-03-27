@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOP管理 - 安全智能审核系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="config.js"></script>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="logo">SAS</div>
+                <h1>安全智能审核系统</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="sops.html" class="active">SOP管理</a></li>
+                <li><a href="standards.html">标准库管理</a></li>
+                <li><a href="dashboard.html">仪表板</a></li>
+                <li><a href="reports.html">报告中心</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 搜索和操作区域 -->
+        <div class="card fade-in">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-clipboard-list"></i> SOP管理
+                </h2>
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜索SOP编号、名称或部门..." 
+                           onkeyup="if(event.key === 'Enter') searchSOPs()">
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <button class="btn btn-primary" onclick="showAddModal()">
+                            <i class="fas fa-plus"></i> 添加新SOP
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadSOPs()">
+                            <i class="fas fa-sync-alt"></i> 刷新
+                        </button>
+                    </div>
+                    <div id="stats" style="color: #4a5568; font-weight: 600;">
+                        加载中...
+                    </div>
+                </div>
+
+                <!-- SOP表格 -->
+                <div class="table-container">
+                    <table class="table" id="sopsTable">
+                        <thead>
+                            <tr>
+                                <th>SOP编号</th>
+                                <th>SOP名称</th>
+                                <th>部门</th>
+                                <th>版本</th>
+                                <th>状态</th>
+                                <th>关联标准数量</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sopsTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 3rem;">
+                                    <div class="loading">
+                                        <div class="loading-spinner"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑SOP模态框 -->
+    <div class="modal" id="sopModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">添加新SOP</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="sopForm" onsubmit="saveSOP(event)">
+                <!-- 文件上传区域 -->
+                <div class="form-group">
+                    <label class="form-label">上传SOP文件 *</label>
+                    <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                        <p>点击或拖拽文件到此区域</p>
+                        <p class="file-hint">仅支持 PDF 格式，最大10MB</p>
+                        <input type="file" id="fileInput" accept=".pdf" style="display: none;" onchange="handleFileSelect(event)">
+                    </div>
+                    <div id="fileName" class="file-name-display"></div>
+                </div>
+                
+                <!-- 自动填充的信息（只读，供用户确认） -->
+                <div class="form-group">
+                    <label class="form-label">SOP名称</label>
+                    <input type="text" id="name" class="form-control" readonly>
+                    <small class="form-text">从文件名自动提取</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">SOP编号</label>
+                    <input type="text" id="sop_no" class="form-control" readonly style="background-color: #f8f9fa; color: #6c757d;">
+                    <small class="form-text">系统自动生成的唯一编号，不可修改</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">版本</label>
+                    <input type="text" id="version" class="form-control" value="v1.0" readonly>
+                    <small class="form-text">默认版本，可在后续审核中修改</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">分类</label>
+                    <select id="category" class="form-control">
+                        <option value="general">通用安全</option>
+                        <option value="mechanical">机械安全</option>
+                        <option value="electrical">电气安全</option>
+                        <option value="chemical">化学品安全</option>
+                        <option value="fire">消防安全</option>
+                        <option value="emergency">应急处理</option>
+                        <option value="operation">操作规程</option>
+                        <option value="maintenance">维护保养</option>
+                    </select>
+                    <small class="form-text">选择SOP的主要分类</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">备注（可选）</label>
+                    <textarea id="description" class="form-control" rows="2" placeholder="可填写特殊说明或备注"></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeModal()">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentSOPId = null;
+        let selectedFile = null;
+
+        // 页面加载时加载SOP
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSOPs();
+            initFileDragDrop();
+        });
+
+        // 辅助函数：转义ID中的特殊字符，确保JavaScript字符串安全
+        function escapeIdForJs(id) {
+            if (!id) return '';
+            // 转义单引号和双引号
+            return id.replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        // 初始化文件拖拽功能
+        function initFileDragDrop() {
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            
+            fileUploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                fileUploadArea.classList.add('dragover');
+            });
+            
+            fileUploadArea.addEventListener('dragleave', function() {
+                fileUploadArea.classList.remove('dragover');
+            });
+            
+            fileUploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                fileUploadArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    handleFileSelect({ target: { files: e.dataTransfer.files } });
+                }
+            });
+        }
+
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // 检查文件大小（10MB限制）
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('文件大小不能超过10MB');
+                    return;
+                }
+                
+                // 检查文件类型 - 只允许PDF
+                if (file.type !== 'application/pdf') {
+                    alert('只支持 PDF 格式的文件，请上传PDF文档');
+                    return;
+                }
+                
+                selectedFile = file;
+                document.getElementById('fileName').textContent = `已选择文件: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                
+                // 自动从文件名提取信息
+                autoFillFromFileName(file.name);
+            }
+        }
+        // 从文件名自动填充信息
+        function autoFillFromFileName(fileName) {
+            // 移除扩展名，保留完整的文件名（不含扩展名）
+            let baseName = fileName.replace(/\.[^/.]+$/, "");
+            
+            // 直接使用完整的文件名作为SOP名称
+            let sopName = baseName;
+            
+            // 如果名称为空
+            if (!sopName) {
+                sopName = '未命名SOP';
+            }
+            
+            // 填充表单
+            document.getElementById('sop_no').value = '系统自动生成';
+            document.getElementById('name').value = sopName;
+            
+            // 根据文件名关键词自动选择分类
+            const fileNameLower = fileName.toLowerCase();
+            let category = 'general';
+            
+            if (fileNameLower.includes('电气') || fileNameLower.includes('electric')) {
+                category = 'electrical';
+            } else if (fileNameLower.includes('机械') || fileNameLower.includes('mech')) {
+                category = 'mechanical';
+            } else if (fileNameLower.includes('化学') || fileNameLower.includes('chem')) {
+                category = 'chemical';
+            } else if (fileNameLower.includes('消防') || fileNameLower.includes('fire')) {
+                category = 'fire';
+            } else if (fileNameLower.includes('应急') || fileNameLower.includes('emergency')) {
+                category = 'emergency';
+            } else if (fileNameLower.includes('操作') || fileNameLower.includes('operation')) {
+                category = 'operation';
+            } else if (fileNameLower.includes('维护') || fileNameLower.includes('maintenance')) {
+                category = 'maintenance';
+            }
+            
+            document.getElementById('category').value = category;
+        }
+
+        // 显示SOP列表
+        function displaySOPs(sops) {
+            const tableBody = document.getElementById('sopsTableBody');
+            
+            // 清空表格
+            tableBody.innerHTML = '';
+            
+            if (!sops || sops.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 2rem; color: #999;">
+                            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <p>暂无SOP数据</p>
+                            <button class="btn btn-primary" onclick="loadSOPs()">刷新</button>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // 填充SOP列表
+            sops.forEach(sop => {
+                const row = document.createElement('tr');
+                row.innerHTML = generateSOPRow(sop);
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 加载SOP列表
+        async function loadSOPs() {
+            const tableBody = document.getElementById('sopsTableBody');
+            const statsElement = document.getElementById('stats');
+            
+            // 显示加载状态
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 3rem;">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                // 使用API配置获取URL
+                const apiUrl = window.API.getApiUrl('/sops');
+                console.log('正在加载SOP数据，API URL:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API返回数据:', data);
+                
+                // 处理不同的数据格式
+                let sops;
+                if (Array.isArray(data)) {
+                    sops = data;
+                } else if (data.status === 'success' && Array.isArray(data.data)) {
+                    sops = data.data;
+                } else if (data.standards && Array.isArray(data.standards)) {
+                    sops = data.standards;
+                } else {
+                    sops = [];
+                }
+                
+                console.log(`获取到 ${sops.length} 条SOP记录`);
+                
+                // 简化：直接使用SOP数据中的standards_count字段
+                // 后端API已经返回了这个字段，不需要再单独调用统计API
+                const sopsWithStandardsCount = sops.map(sop => {
+                    // 确保standards_count字段存在
+                    sop.standards_count = sop.standards_count || 0;
+                    return sop;
+                });
+                
+                // 显示SOP列表
+                displaySOPs(sopsWithStandardsCount);
+                
+                // 更新统计信息
+                const totalSOPs = sopsWithStandardsCount.length;
+                const totalStandards = sopsWithStandardsCount.reduce((sum, sop) => sum + (sop.standards_count || 0), 0);
+                const avgStandards = totalSOPs > 0 ? (totalStandards / totalSOPs).toFixed(1) : 0;
+                
+                // 简化统计信息显示
+                statsElement.innerHTML = `
+                    <span style="color: #4299e1;">
+                        <i class="fas fa-clipboard-list"></i> ${totalSOPs} 个SOP
+                    </span>
+                    <span style="margin-left: 1rem; color: #38a169;">
+                        <i class="fas fa-link"></i> ${totalStandards} 个关联标准
+                    </span>
+                    <span style="margin-left: 1rem; color: #d69e2e;">
+                        <i class="fas fa-chart-line"></i> 平均 ${avgStandards} 个/项
+                    </span>
+                `;
+                
+            } catch (error) {
+                console.error('加载SOP失败:', error);
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 2rem; color: #f5222d;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <h3>加载失败</h3>
+                            <p>${error.message}</p>
+                            <button class="btn btn-secondary" onclick="loadSOPs()">重试</button>
+                        </td>
+                    </tr>
+                `;
+                statsElement.textContent = '加载失败';
+            }
+        }
+
+        // 显示SOP列表
+        function displaySOPs(sops) {
+            const tableBody = document.getElementById('sopsTableBody');
+            
+            // 清空表格
+            tableBody.innerHTML = '';
+            
+            if (!sops || sops.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 2rem; color: #999;">
+                            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <p>暂无SOP数据</p>
+                            <button class="btn btn-primary" onclick="showAddModal()">添加第一个SOP</button>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // 填充SOP列表
+            sops.forEach(sop => {
+                const row = document.createElement('tr');
+                row.innerHTML = generateSOPRow(sop);
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 搜索SOP
+        async function searchSOPs() {
+            const searchInput = document.getElementById('searchInput');
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                loadSOPs();
+                return;
+            }
+            
+            const tableBody = document.getElementById('sopsTableBody');
+            const statsElement = document.getElementById('stats');
+            
+            // 显示加载状态
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 3rem;">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                const apiUrl = window.API.getApiUrl(`/sops/search?q=${encodeURIComponent(query)}`);
+                console.log('搜索SOP，API URL:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('搜索返回数据:', data);
+                
+                // 处理搜索结果
+                let sops;
+                if (Array.isArray(data)) {
+                    sops = data;
+                } else if (data.status === 'success' && Array.isArray(data.data)) {
+                    sops = data.data;
+                } else {
+                    throw new Error('搜索返回格式错误');
+                }
+                
+                statsElement.textContent = `找到 ${sops.length} 条结果`;
+                
+                // 清空表格
+                tableBody.innerHTML = '';
+                
+                if (sops.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 2rem; color: #999;">
+                                <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                                <p>未找到匹配的SOP</p>
+                                <button class="btn btn-primary" onclick="loadSOPs()">返回全部</button>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                // 填充搜索结果
+                sops.forEach(sop => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = generateSOPRow(sop);
+                    tableBody.appendChild(row);
+                });
+                
+            } catch (error) {
+                console.error('搜索SOP失败:', error);
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 2rem; color: #f5222d;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <h3>搜索失败</h3>
+                            <p>${error.message}</p>
+                            <button class="btn btn-secondary" onclick="loadSOPs()">返回全部</button>
+                        </td>
+                    </tr>
+                `;
+                statsElement.textContent = '搜索失败';
+            }
+        }
+
+        // 显示添加模态框
+        function showAddModal() {
+            currentSOPId = null;
+            document.getElementById('modalTitle').textContent = '添加新SOP';
+            document.getElementById('sopForm').reset();
+            document.getElementById('fileName').textContent = '';
+            selectedFile = null;
+            document.getElementById('version').value = 'v1.0';
+            document.getElementById('category').value = 'general';
+            document.getElementById('sopModal').style.display = 'flex';
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('sopModal').style.display = 'none';
+        }
+
+        // 保存SOP
+        async function saveSOP(event) {
+            event.preventDefault();
+            
+            if (!selectedFile) {
+                alert('请先选择SOP文件');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('name', document.getElementById('name').value);
+            formData.append('version', document.getElementById('version').value);
+            formData.append('category', document.getElementById('category').value);
+            // 注意：后端不需要 sop_no 和 description 字段
+            
+            try {
+                const apiUrl = window.API.getApiUrl('/sops');
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`保存失败: ${response.status} - ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('保存成功:', result);
+                
+                alert('SOP保存成功！');
+                closeModal();
+                loadSOPs();
+                
+            } catch (error) {
+                console.error('保存SOP失败:', error);
+                alert(`保存失败: ${error.message}`);
+            }
+        }
+
+        // 查看SOP详情
+        function viewSOP(id) {
+            // 跳转到SOP详情页面
+            window.location.href = `sop-detail-clean-fixed.html?sop_id=${id}`;
+        }
+
+        // 编辑SOP
+        function editSOP(id) {
+            // 先获取SOP数据，然后填充到编辑模态框
+            editSOPData(id);
+        }
+
+        // 生成SOP表格行
+        function generateSOPRow(sop) {
+            // 状态样式
+            const status = sop.status || sop.compliance_status || 'pending';
+            let statusClass = '';
+            let statusText = '';
+            
+            switch(status.toLowerCase()) {
+                case 'compliant':
+                case 'approved':
+                    statusClass = 'status-approved';
+                    statusText = '已审核';
+                    break;
+                case 'pending':
+                case 'reviewing':
+                    statusClass = 'status-pending';
+                    statusText = '待审核';
+                    break;
+                case 'non-compliant':
+                case 'rejected':
+                    statusClass = 'status-non-compliant';
+                    statusText = '未通过';
+                    break;
+                default:
+                    statusClass = '';
+                    statusText = status;
+            }
+            
+            // 获取关联标准数量
+            const standardsCount = sop.standards_count || sop.linked_standards_count || 0;
+            
+            // 格式化时间
+            const createdAt = sop.created_at || sop.updated_at || '未知';
+            const formattedTime = createdAt !== '未知' ? new Date(createdAt).toLocaleDateString('zh-CN') : '未知';
+            
+            return `
+                <td>${sop.sop_no || sop.id || 'N/A'}</td>
+                <td>
+                    <a href="javascript:void(0)" onclick="viewSOP('${sop.id}')" style="color: #1890ff; text-decoration: none; font-weight: 500;">
+                        ${sop.name || '未命名'}
+                    </a>
+                </td>
+                <td>${sop.department || '未指定'}</td>
+                <td>${sop.version || 'v1.0'}</td>
+                <td><span class="${statusClass}">${statusText}</span></td>
+                <td>
+                    <span class="standards-count-badge" data-sop-id="${sop.id}" data-count="${standardsCount}" title="点击查看关联标准 (${standardsCount}个)">
+                        ${standardsCount}
+                    </span>
+                </td>
+                <td>${formattedTime}</td>
+                <td>
+                    <button class="btn-action" onclick="viewSOP('${sop.id}')" title="查看">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-action" onclick="editSOP('${sop.id}')" title="编辑">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-action" onclick="deleteSOP('${sop.id}')" title="删除">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+        }
+
+        // 删除SOP
+        async function deleteSOP(id) {
+            if (!confirm('确定要删除这个SOP吗？此操作不可撤销。')) {
+                return;
+            }
+            
+            try {
+                const apiUrl = window.API.getApiUrl(`/sops/${id}`);
+                const response = await fetch(apiUrl, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`删除失败: ${response.status}`);
+                }
+                
+                alert('SOP删除成功！');
+                loadSOPs();
+                
+            } catch (error) {
+                console.error('删除SOP失败:', error);
+                alert(`删除失败: ${error.message}`);
+            }
+        }
+
+        // 查看关联标准详情
+        function viewStandards(sopId) {
+            // 跳转到SOP详情页面的关联标准标签页
+            window.location.href = `sop-detail-clean-fixed.html?sop_id=${sopId}#standards`;
+        }
+
+        // 加载完成后绑定事件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 延迟绑定，因为表格是动态生成的
+            setTimeout(() => {
+                bindStandardsCountEvents();
+            }, 1000);
+        });
+
+        // 绑定关联标准数量点击事件
+        function bindStandardsCountEvents() {
+            document.querySelectorAll('.standards-count-badge').forEach(badge => {
+                badge.addEventListener('click', function() {
+                    const sopId = this.getAttribute('data-sop-id');
+                    if (sopId) {
+                        // 跳转到SOP详情页面的关联标准标签页
+                        window.location.href = `sop-detail-clean-fixed.html?sop_id=${sopId}#linked-standards`;
+                    }
+                });
+            });
+        }
+
+        // 确保displaySOPs函数在显示后绑定事件
+        (function() {
+            const originalDisplaySOPs = window.displaySOPs;
+            if (originalDisplaySOPs) {
+                window.displaySOPs = function(sops) {
+                    originalDisplaySOPs(sops);
+                    // 重新绑定事件
+                    setTimeout(bindStandardsCountEvents, 100);
+                };
+            }
+        })();
+    </script>
+
+    <style>
+        /* 关联标准数量徽章样式 */
+        .standards-count-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .standards-count-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+
+        .standards-count-badge:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
+        }
+
+        /* 不同数量的颜色变化 */
+        .standards-count-badge[data-count="0"] {
+            background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
+            box-shadow: 0 2px 4px rgba(160, 174, 192, 0.2);
+        }
+
+        .standards-count-badge[data-count="0"]:hover {
+            background: linear-gradient(135deg, #90a0b2 0%, #627085 100%);
+            box-shadow: 0 4px 8px rgba(160, 174, 192, 0.3);
+        }
+
+        .standards-count-badge[data-count^="1"],
+        .standards-count-badge[data-count^="2"],
+        .standards-count-badge[data-count^="3"] {
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+            box-shadow: 0 2px 4px rgba(246, 173, 85, 0.2);
+        }
+
+        .standards-count-badge[data-count^="1"]:hover,
+        .standards-count-badge[data-count^="2"]:hover,
+        .standards-count-badge[data-count^="3"]:hover {
+            background: linear-gradient(135deg, #f0a23a 0%, #e0781b 100%);
+            box-shadow: 0 4px 8px rgba(246, 173, 85, 0.3);
+        }
+
+        .standards-count-badge[data-count^="4"],
+        .standards-count-badge[data-count^="5"],
+        .standards-count-badge[data-count^="6"],
+        .standards-count-badge[data-count^="7"],
+        .standards-count-badge[data-count^="8"],
+        .standards-count-badge[data-count^="9"] {
+            background: linear-gradient(135deg, #68d391 0%, #38a169 100%);
+            box-shadow: 0 2px 4px rgba(104, 211, 145, 0.2);
+        }
+
+        .standards-count-badge[data-count^="4"]:hover,
+        .standards-count-badge[data-count^="5"]:hover,
+        .standards-count-badge[data-count^="6"]:hover,
+        .standards-count-badge[data-count^="7"]:hover,
+        .standards-count-badge[data-count^="8"]:hover,
+        .standards-count-badge[data-count^="9"]:hover {
+            background: linear-gradient(135deg, #5ac983 0%, #2d8c57 100%);
+            box-shadow: 0 4px 8px rgba(104, 211, 145, 0.3);
+        }
+
+        .standards-count-badge[data-count^="10"] {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            box-shadow: 0 2px 4px rgba(245, 101, 101, 0.2);
+        }
+
+        .standards-count-badge[data-count^="10"]:hover {
+            background: linear-gradient(135deg, #f44b4b 0%, #d42a2a 100%);
+            box-shadow: 0 4px 8px rgba(245, 101, 101, 0.3);
+        }
+
+        /* 表格中的徽章对齐 */
+        #sopsTable td:nth-child(6) {
+            text-align: center;
+        }
+
+        /* 工具提示 */
+        .standards-count-badge::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .standards-count-badge:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</body>
+</html>

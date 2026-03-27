@@ -1,0 +1,3134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOP详情 - 安全智能审核系统 (v2.0)</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="config.js"></script>
+    <!-- 统一AI审核函数库 -->
+    <script src="ai-audit-fixed.js"></script>
+    <style>
+        .sop-detail-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .sop-header {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .sop-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .sop-title h1 {
+            margin: 0;
+            color: #2d3748;
+            font-size: 1.5rem;
+        }
+        
+        .sop-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .meta-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+        
+        .meta-label {
+            font-size: 0.875rem;
+            color: #718096;
+            margin-bottom: 0.25rem;
+        }
+        
+        .meta-value {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .tab-container {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .tab-header {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .tab-button {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            color: #718096;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+        
+        .tab-button:hover {
+            color: #4299e1;
+        }
+        
+        .tab-button.active {
+            color: #4299e1;
+            font-weight: 600;
+        }
+        
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #4299e1;
+        }
+        
+        .tab-content {
+            padding: 1.5rem;
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .status-message {
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .status-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border-left: 4px solid #38a169;
+        }
+        
+        .status-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border-left: 4px solid #e53e3e;
+        }
+        
+        .status-info {
+            background: #bee3f8;
+            color: #2c5282;
+            border-left: 4px solid #4299e1;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #718096;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #cbd5e0;
+        }
+        
+        .standards-list {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .standard-item {
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #4299e1;
+        }
+        
+        .standard-info h4 {
+            margin: 0 0 0.5rem 0;
+            color: #2d3748;
+        }
+        
+        .standard-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: #718096;
+        }
+        
+        .standard-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .audit-records {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .audit-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        
+        .audit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .audit-title {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .audit-score {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .score-high {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .score-medium {
+            background: #feebc8;
+            color: #744210;
+        }
+        
+        .score-low {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .audit-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: #718096;
+            margin-bottom: 0.5rem;
+        }
+        
+        .audit-summary {
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: #4a5568;
+        }
+        
+        /* 模态框样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+        }
+        .modal-header {
+            padding: 1.5rem 1.5rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 {
+            margin: 0;
+            color: #2d3748;
+        }
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #718096;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+        .btn-close:hover {
+            color: #2d3748;
+        }
+        .modal-body {
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="logo">SAS</div>
+                <h1>安全智能审核系统</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="sops.html">SOP管理</a></li>
+                <li><a href="standards.html">标准库管理</a></li>
+                <li><a href="dashboard.html">仪表板</a></li>
+                <li><a href="reports.html">报告中心</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- SOP详情容器 -->
+    <div class="sop-detail-container">
+        <!-- SOP头部信息 -->
+        <div class="sop-header">
+            <div class="sop-title">
+                <h1 id="sopName">加载中...</h1>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="window.history.back()">
+                        <i class="fas fa-arrow-left"></i> 返回
+                    </button>
+                    <button class="btn btn-primary" onclick="startAIaudit()">
+                        <i class="fas fa-robot"></i> AI智能审核
+                    </button>
+                    <button class="btn btn-info" onclick="clearCacheAndReload()" title="如果遇到标签页错误，点击此按钮清除缓存并刷新">
+                        <i class="fas fa-sync-alt"></i> 清除缓存
+                    </button>
+                </div>
+            </div>
+            
+            <div class="sop-meta">
+                <div class="meta-item">
+                    <div class="meta-label">SOP编号</div>
+                    <div class="meta-value" id="sopNo">-</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">版本</div>
+                    <div class="meta-value" id="sopVersion">-</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">部门</div>
+                    <div class="meta-value" id="sopDepartment">-</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">审核状态</div>
+                    <div class="meta-value" id="sopAuditStatus">未审核</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">创建时间</div>
+                    <div class="meta-value" id="sopCreatedAt">-</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">文件大小</div>
+                    <div class="meta-value" id="sopFileSize">-</div>
+                </div>
+            </div>
+            
+            <div id="statusMessage"></div>
+        </div>
+
+        <!-- 标签页容器 -->
+        <div class="tab-container">
+            <div class="tab-header">
+                <button class="tab-button active" data-tab="content">SOP内容</button>
+                <button class="tab-button" data-tab="standards">关联标准</button>
+                <button class="tab-button" data-tab="audits">审核记录</button>
+                <button class="tab-button" data-tab="aiAudit">AI审核</button>
+            </div>
+            
+            <!-- SOP内容标签页 -->
+            <div class="tab-content active" id="contentTab">
+                <div id="sopContent">
+                    <div class="empty-state">
+                        <i class="fas fa-file-alt"></i>
+                        <h3>加载SOP内容...</h3>
+                        <p>正在从服务器获取SOP内容，请稍候...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 关联标准标签页 -->
+            <div class="tab-content" id="standardsTab">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>关联的技术标准</h3>
+                    <button class="btn btn-primary" onclick="showLinkStandardModal()">
+                        <i class="fas fa-link"></i> 关联新标准
+                    </button>
+                </div>
+                
+                <div id="standardsList">
+                    <div class="empty-state" id="noStandardsMessage">
+                        <i class="fas fa-unlink"></i>
+                        <h3>尚未关联任何技术标准</h3>
+                        <p>点击"关联新标准"按钮为此SOP关联相关的技术标准</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 审核记录标签页 -->
+            <div class="tab-content" id="auditsTab">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>审核历史记录</h3>
+                    <button class="btn btn-secondary" onclick="loadAuditHistory()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+                
+                <div id="auditRecords">
+                    <div class="empty-state" id="noAuditsMessage">
+                        <i class="fas fa-clipboard-check"></i>
+                        <h3>暂无审核记录</h3>
+                        <p>点击"AI智能审核"按钮开始审核此SOP</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI审核标签页 -->
+            <div class="tab-content" id="aiAuditTab">
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3>AI智能审核</h3>
+                            <p style="color: #718096; margin-bottom: 0;">
+                                基于关联的技术标准，使用AI对SOP进行智能审核，识别合规性问题并提供改进建议。
+                            </p>
+                        </div>
+                        <button class="btn btn-primary" onclick="startAIaudit()">
+                            <i class="fas fa-robot"></i> 启动AI审核
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 审核状态和统计 -->
+                <div id="auditStatusSection" style="display: none; margin-bottom: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                        <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">
+                            <div style="font-size: 0.875rem; color: #718096;">审核状态</div>
+                            <div id="auditStatus" style="font-weight: 600; margin-top: 0.25rem; color: #2d3748;">-</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">
+                            <div style="font-size: 0.875rem; color: #718096;">总体符合性</div>
+                            <div id="overallCompliance" style="font-weight: 600; margin-top: 0.25rem; color: #2d3748;">-</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">
+                            <div style="font-size: 0.875rem; color: #718096;">审核条款数</div>
+                            <div id="auditItemsCount" style="font-weight: 600; margin-top: 0.25rem; color: #2d3748;">-</div>
+                        </div>
+                        <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">
+                            <div style="font-size: 0.875rem; color: #718096;">审核时间</div>
+                            <div id="auditTime" style="font-weight: 600; margin-top: 0.25rem; color: #2d3748;">-</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 审核进度 -->
+                <div id="auditProgressSection" style="display: none; margin-bottom: 1.5rem;">
+                    <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span>AI审核进度</span>
+                            <span id="auditProgressPercent">0%</span>
+                        </div>
+                        <div style="height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                            <div id="auditProgressBar" style="height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div id="auditProgressText" style="margin-top: 0.5rem; font-size: 0.875rem; color: #666;">正在启动AI审核...</div>
+                    </div>
+                </div>
+                
+                <!-- 审核结果表格 -->
+                <div id="auditResultsSection" style="display: none;">
+                    <div style="margin-bottom: 1rem;">
+                        <h4>逐条款审核结果</h4>
+                        <p style="color: #718096; font-size: 0.875rem;">基于关联的技术标准，对SOP进行逐条款合规性审核。</p>
+                    </div>
+                    
+                    <div id="auditResultsTable" style="background: white; border-radius: 0.5rem; border: 1px solid #e2e8f0; overflow: hidden;">
+                        <!-- 表格将通过JavaScript动态生成 -->
+                    </div>
+                    
+                    <div id="auditSummary" style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 0.5rem; font-size: 0.875rem; color: #666;">
+                        <!-- 审核摘要将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 无审核记录 -->
+                <div id="noAuditSection" class="empty-state">
+                    <i class="fas fa-robot"></i>
+                    <h3>暂无AI审核记录</h3>
+                    <p>点击"启动AI审核"按钮开始审核此SOP</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentSopId = '';
+        let currentSopData = null;
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 从URL获取SOP ID
+            const urlParams = new URLSearchParams(window.location.search);
+            currentSopId = urlParams.get('sop_id');
+            
+            if (!currentSopId) {
+                showStatus('未指定SOP ID', 'error');
+                return;
+            }
+            
+            // 设置标签页切换
+            setupTabSwitching();
+            
+            // 加载SOP数据
+            loadSOPData();
+            
+            // 加载关联标准（只在标准标签页激活时才加载）
+            // loadLinkedStandards(); // 注释掉，改为标签页激活时加载
+            
+            // 加载审核记录（只在审核记录标签页激活时才加载）
+            // loadAuditHistory(); // 注释掉，改为标签页激活时加载
+            
+            // 检查是否有AI审核记录（只在AI审核标签页激活时才加载）
+            // checkAIAuditHistory(); // 注释掉，改为标签页激活时加载
+        });
+        
+        // ========== 标签页切换 ==========
+        function setupTabSwitching() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    
+                    // 移除所有active类
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // 添加active类
+                    this.classList.add('active');
+                    
+                    // 安全地添加标签页内容的active类
+                    const tabContent = document.getElementById(tabName + 'Tab');
+                    if (tabContent) {
+                        tabContent.classList.add('active');
+                        
+                        // 根据激活的标签页加载数据
+                        if (tabName === 'audits') {
+                            loadAuditHistory();
+                        } else if (tabName === 'standards') {
+                            loadLinkedStandards();
+                        } else if (tabName === 'aiAudit') {
+                            checkAIAuditHistory();
+                        }
+                    } else {
+                        console.warn(`标签页内容未找到: ${tabName}Tab`);
+                    }
+                });
+            });
+        }
+        
+        // ========== 加载SOP数据 ==========
+        async function loadSOPData() {
+            try {
+                showStatus('正在加载SOP数据...', 'info');
+                
+                const apiUrl = window.API.getApiUrl(`/sops/${currentSopId}`);
+                console.log('加载SOP数据:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // SOP不存在，使用模拟数据
+                        useMockData();
+                        return;
+                    }
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('SOP数据:', result);
+                
+                currentSopData = result;
+                displaySOPData();
+                
+                // 提取PDF内容
+                extractPDFContent(currentSopId);
+                
+                showStatus('SOP数据加载完成', 'success');
+                
+            } catch (error) {
+                console.error('加载SOP数据失败:', error);
+                showStatus(`加载失败: ${error.message}`, 'error');
+                
+                // 尝试使用模拟数据
+                useMockData();
+            }
+        }
+        
+        function displaySOPData() {
+            if (!currentSopData) return;
+            
+            console.log('显示SOP数据:', currentSopData);
+            
+            // 更新页面元素
+            document.getElementById('sopName').textContent = currentSopData.name || '未命名';
+            document.getElementById('sopNo').textContent = currentSopData.sop_no || currentSopData.id || '-';
+            document.getElementById('sopVersion').textContent = currentSopData.version || 'v1.0';
+            document.getElementById('sopDepartment').textContent = currentSopData.department || '安全部';
+            document.getElementById('sopCreatedAt').textContent = currentSopData.created_at ? 
+                new Date(currentSopData.created_at).toLocaleString('zh-CN') : '-';
+            document.getElementById('sopFileSize').textContent = currentSopData.file_size ? 
+                formatFileSize(currentSopData.file_size) : '-';
+            
+            // 审核状态 - 使用从API获取的compliance_status字段
+            const complianceStatus = currentSopData.compliance_status || 'pending';
+            const auditScore = currentSopData.audit_score || 0;
+            let statusText = '';
+            let statusColor = '';
+            
+            switch(complianceStatus) {
+                case 'compliant':
+                    statusText = auditScore > 0 ? `已审核 (${auditScore.toFixed(1)}分)` : '已审核';
+                    statusColor = '#38a169'; // 绿色
+                    break;
+                case 'reviewing':
+                    statusText = '审核中';
+                    statusColor = '#ed8936'; // 橙色
+                    break;
+                case 'non-compliant':
+                    statusText = auditScore > 0 ? `未通过 (${auditScore.toFixed(1)}分)` : '未通过';
+                    statusColor = '#e53e3e'; // 红色
+                    break;
+                case 'pending':
+                default:
+                    statusText = '未审核';
+                    statusColor = '#a0aec0'; // 灰色
+            }
+            
+            const auditStatusElement = document.getElementById('sopAuditStatus');
+            auditStatusElement.textContent = statusText;
+            auditStatusElement.style.color = statusColor;
+            auditStatusElement.style.fontWeight = 'bold';
+            
+            // 如果有最近审核信息，也显示
+            if (currentSopData.last_audit_date) {
+                const auditDate = new Date(currentSopData.last_audit_date).toLocaleDateString('zh-CN');
+                const auditInfo = document.getElementById('sopAuditInfo');
+                if (auditInfo) {
+                    auditInfo.textContent = `最近审核: ${auditDate} ${currentSopData.last_auditor ? `(${currentSopData.last_auditor})` : ''}`;
+                    auditInfo.style.fontSize = '0.875rem';
+                    auditInfo.style.color = '#718096';
+                    auditInfo.style.marginTop = '0.25rem';
+                }
+            }
+        }
+        
+        // ========== 加载关联标准 ==========
+        async function loadLinkedStandards() {
+            try {
+                const apiUrl = window.API.getApiUrl(`/sops/${currentSopId}/standards`);
+                console.log('加载关联标准:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                const standards = Array.isArray(result) ? result : (result.data || []);
+                
+                displayStandards(standards);
+                
+            } catch (error) {
+                console.error('加载关联标准失败:', error);
+                // 不显示错误，保持空状态
+            }
+        }
+        
+        function displayStandards(standards) {
+            const container = document.getElementById('standardsList');
+            const emptyMessage = document.getElementById('noStandardsMessage');
+            
+            if (standards.length === 0) {
+                container.innerHTML = '';
+                emptyMessage.style.display = 'block';
+                return;
+            }
+            
+            emptyMessage.style.display = 'none';
+            
+            let html = '<div class="standards-list">';
+            
+            standards.forEach(standard => {
+                const standardId = standard.standard_id || standard.id;
+                const standardName = standard.name || standard.standard_no || '未命名';
+                const standardNo = standard.standard_no || standardId;
+                const category = standard.category || 'unknown';
+                const mappingId = standard.mapping_id || standard.id;
+                
+                html += `
+                    <div class="standard-item">
+                        <div class="standard-info">
+                            <h4>${standardName}</h4>
+                            <div class="standard-meta">
+                                <span>编号: ${standardNo}</span>
+                                <span>类别: ${category}</span>
+                                ${standard.effective_date ? 
+                                    `<span>生效: ${standard.effective_date}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="standard-actions">
+                            <button class="btn btn-secondary" onclick="viewStandard('${standardId}')" title="查看">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-danger" onclick="unlinkStandard('${mappingId}', '${standardName}')" title="取消关联">
+                                <i class="fas fa-unlink"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        // ========== 加载审核记录 ==========
+        async function loadAuditHistory() {
+            try {
+                // 检查容器是否存在
+                const container = document.getElementById('auditRecords');
+                const emptyMessage = document.getElementById('noAuditsMessage');
+                
+                if (!container || !emptyMessage) {
+                    console.warn('审核记录容器元素未找到，可能标签页未激活。将在需要时自动加载。');
+                    return;
+                }
+                
+                showStatus('正在加载审核记录...', 'info');
+                
+                // 从主后端API获取审核记录（从audit_results表）
+                const apiUrl = window.API.getApiUrl(`/audit-results?sop_id=${currentSopId}&limit=20`);
+                console.log('加载审核记录:', apiUrl);
+                
+                let response;
+                try {
+                    response = await fetch(apiUrl, {
+                        signal: AbortSignal.timeout(10000) // 10秒超时
+                    });
+                } catch (fetchError) {
+                    console.warn('获取审核记录失败（网络错误）:', fetchError);
+                    // 尝试从数据库直接获取
+                    await loadAuditRecordsFromDatabase();
+                    return;
+                }
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        // API端点不存在，尝试从数据库直接获取
+                        console.log('审核记录API不存在，尝试从数据库获取');
+                        await loadAuditRecordsFromDatabase();
+                        return;
+                    }
+                    console.warn(`获取审核记录失败 (${response.status}): ${response.statusText}`);
+                    // 尝试从数据库直接获取
+                    await loadAuditRecordsFromDatabase();
+                    return;
+                }
+                
+                let result;
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    console.warn('解析审核记录JSON失败:', jsonError);
+                    // 尝试从数据库直接获取
+                    await loadAuditRecordsFromDatabase();
+                    return;
+                }
+                
+                const audits = result.data || result || [];
+                console.log(`加载到 ${audits.length} 条审核记录`);
+                
+                if (audits.length > 0) {
+                    displayAudits(audits);
+                } else {
+                    console.log('没有审核记录');
+                    container.innerHTML = '';
+                    emptyMessage.style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('加载审核记录失败:', error);
+                // 尝试从数据库直接获取
+                await loadAuditRecordsFromDatabase();
+            }
+        }
+        
+        // 从数据库直接获取审核记录
+        async function loadAuditRecordsFromDatabase() {
+            try {
+                console.log('尝试从数据库直接获取审核记录...');
+                
+                // 使用fetch调用一个自定义端点来获取数据库中的审核记录
+                const apiUrl = window.API.getApiUrl(`/sops/${currentSopId}/audit-records`);
+                console.log('数据库查询API:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const audits = result.data || result || [];
+                    
+                    if (audits.length > 0) {
+                        console.log(`从数据库加载到 ${audits.length} 条审核记录`);
+                        displayAudits(audits);
+                    } else {
+                        console.log('数据库中没有审核记录');
+                        showMockAudits();
+                    }
+                } else {
+                    console.log('数据库查询API失败，使用模拟数据');
+                    showMockAudits();
+                }
+            } catch (error) {
+                console.error('从数据库获取审核记录失败:', error);
+                showMockAudits();
+            }
+        }
+        
+        // 显示AI审核记录
+        function displayAIAudits(audits) {
+            const container = document.getElementById('auditRecords');
+            const emptyMessage = document.getElementById('noAuditsMessage');
+            
+            if (!audits || audits.length === 0) {
+                container.innerHTML = '';
+                emptyMessage.style.display = 'block';
+                return;
+            }
+            
+            emptyMessage.style.display = 'none';
+            
+            // 按时间倒序排列
+            audits.sort((a, b) => new Date(b.audit_date || b.created_at) - new Date(a.audit_date || a.created_at));
+            
+            let html = '<div class="audit-records">';
+            
+            audits.forEach((audit, index) => {
+                // 计算审核评分（如果有的话）
+                const auditSummary = audit.audit_summary || {};
+                const itemizedAudit = audit.result?.audit_result?.itemized_audit || [];
+                
+                // 计算符合性评分
+                let compliantCount = 0;
+                let partialCount = 0;
+                let nonCompliantCount = 0;
+                
+                itemizedAudit.forEach(item => {
+                    const status = item.compliance_status || '';
+                    if (status.includes('符合') && !status.includes('部分') && !status.includes('不符合')) {
+                        compliantCount++;
+                    } else if (status.includes('部分符合')) {
+                        partialCount++;
+                    } else if (status.includes('不符合')) {
+                        nonCompliantCount++;
+                    }
+                });
+                
+                const totalItems = itemizedAudit.length || 1;
+                const complianceRate = totalItems > 0 ? Math.round((compliantCount / totalItems) * 100) : 0;
+                
+                // 确定评分等级
+                let score = complianceRate;
+                let scoreClass = '';
+                let scoreText = '';
+                
+                if (score >= 90) {
+                    scoreClass = 'score-high';
+                    scoreText = '优秀';
+                } else if (score >= 70) {
+                    scoreClass = 'score-medium';
+                    scoreText = '良好';
+                } else if (score >= 50) {
+                    scoreClass = 'score-low';
+                    scoreText = '一般';
+                } else {
+                    scoreClass = 'score-poor';
+                    scoreText = '需改进';
+                }
+                
+                // 格式化日期
+                const auditDate = audit.audit_date || audit.created_at;
+                const formattedDate = auditDate ? new Date(auditDate).toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '未知时间';
+                
+                // 构建审核记录项
+                html += `
+                    <div class="audit-item" data-task-id="${audit.task_id}" onclick="viewAuditDetail('${audit.task_id}')">
+                        <div class="audit-header">
+                            <div class="audit-title">
+                                <strong>${audit.auditor || 'AI智能审核系统'}</strong>
+                                <span class="audit-time">${formattedDate}</span>
+                            </div>
+                            <div class="audit-score ${scoreClass}">
+                                <div class="score-value">${score}%</div>
+                                <div class="score-text">${scoreText}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="audit-body">
+                            <div class="audit-meta">
+                                <span class="meta-item">
+                                    <i class="fas fa-file-alt"></i>
+                                    ${audit.sop_name || 'SOP审核'}
+                                </span>
+                                <span class="meta-item">
+                                    <i class="fas fa-balance-scale"></i>
+                                    标准数量: ${audit.standards_count || 1}
+                                </span>
+                                <span class="meta-item">
+                                    <i class="fas fa-list-check"></i>
+                                    审核条款: ${totalItems} 项
+                                </span>
+                            </div>
+                            
+                            <div class="compliance-stats">
+                                <span class="stat-item stat-compliant">
+                                    <i class="fas fa-check-circle"></i>
+                                    符合: ${compliantCount}
+                                </span>
+                                <span class="stat-item stat-partial">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    部分符合: ${partialCount}
+                                </span>
+                                <span class="stat-item stat-noncompliant">
+                                    <i class="fas fa-times-circle"></i>
+                                    不符合: ${nonCompliantCount}
+                                </span>
+                            </div>
+                            
+                            <div class="audit-summary">
+                                <strong>审核摘要:</strong>
+                                ${auditSummary.overall_compliance ? `总体符合性: ${auditSummary.overall_compliance}` : '点击查看详细审核结果...'}
+                            </div>
+                        </div>
+                        
+                        <div class="audit-footer">
+                            <button class="btn-view-detail" onclick="event.stopPropagation(); viewAuditDetail('${audit.task_id}')">
+                                <i class="fas fa-eye"></i> 查看详情
+                            </button>
+                            <span class="task-id">任务ID: ${audit.task_id}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+            // 添加CSS样式
+            addAuditStyles();
+        }
+        
+        function displayAudits(audits) {
+            const container = document.getElementById('auditRecords');
+            const emptyMessage = document.getElementById('noAuditsMessage');
+            
+            // 安全检查
+            if (!container || !emptyMessage) {
+                console.error('审核记录容器元素未找到');
+                return;
+            }
+            
+            if (!audits || audits.length === 0) {
+                container.innerHTML = '';
+                emptyMessage.style.display = 'block';
+                return;
+            }
+            
+            emptyMessage.style.display = 'none';
+            
+            let html = '<div class="audit-records">';
+            
+            audits.forEach(audit => {
+                const score = audit.overall_score || audit.score || 0;
+                let scoreClass = '';
+                let scoreText = '';
+                
+                if (score >= 90) {
+                    scoreClass = 'score-high';
+                    scoreText = '优秀';
+                } else if (score >= 70) {
+                    scoreClass = 'score-medium';
+                    scoreText = '良好';
+                } else if (score >= 50) {
+                    scoreClass = 'score-low';
+                    scoreText = '一般';
+                } else {
+                    scoreClass = 'score-poor';
+                    scoreText = '需改进';
+                }
+                
+                // 格式化日期
+                const auditDate = audit.audit_date || audit.created_at;
+                const formattedDate = auditDate ? new Date(auditDate).toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '未知时间';
+                
+                html += `
+                    <div class="audit-item">
+                        <div class="audit-header">
+                            <div class="audit-title">
+                                <strong>${audit.auditor || '未知审核员'}</strong>
+                                <span class="audit-time">${formattedDate}</span>
+                            </div>
+                            <div class="audit-score ${scoreClass}">
+                                <div class="score-value">${score.toFixed(1)}</div>
+                                <div class="score-text">${scoreText}</div>
+                            </div>
+                        </div>
+                        <div class="audit-meta">
+                            <span>状态: ${audit.status || 'completed'}</span>
+                            <span>审核ID: ${audit.id}</span>
+                        </div>
+                        <div class="audit-summary">
+                            ${audit.summary || '暂无摘要'}
+                        </div>
+                        <div class="audit-footer">
+                            <button class="btn-view-detail" onclick="viewAuditDetails(${audit.id})">
+                                <i class="fas fa-eye"></i> 查看审核结论
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+            // 添加CSS样式
+            addAuditStyles();
+        }
+        
+        // ========== 关联标准功能 ==========
+        function showLinkStandardModal() {
+            // 创建模态框HTML
+            const modalHTML = `
+                <div id="linkStandardModal" class="modal-overlay active">
+                    <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-header">
+                            <h3>关联技术标准</h3>
+                            <button class="btn-close" onclick="closeLinkStandardModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                                    <i class="fas fa-search"></i> 搜索技术标准
+                                </label>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="text" id="standardSearch" placeholder="输入标准名称或编号..." 
+                                           style="flex: 1; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.375rem;"
+                                           oninput="searchStandards()">
+                                    <button class="btn btn-primary" onclick="searchStandards()">
+                                        <i class="fas fa-search"></i> 搜索
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="standardsSearchResults" style="max-height: 300px; overflow-y: auto; margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 0.375rem;">
+                                <div class="empty-state" style="padding: 2rem 1rem;">
+                                    <i class="fas fa-search"></i>
+                                    <p>输入关键词搜索技术标准</p>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                                <h4 style="margin-bottom: 0.5rem;">手动关联</h4>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="text" id="manualStandardId" placeholder="输入标准ID..." 
+                                           style="flex: 1; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.375rem;">
+                                    <button class="btn btn-primary" onclick="linkManualStandard()">
+                                        <i class="fas fa-link"></i> 关联
+                                    </button>
+                                </div>
+                                <p style="font-size: 0.875rem; color: #718096; margin-top: 0.5rem;">
+                                    提示：标准ID可以在标准库管理页面找到
+                                </p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="closeLinkStandardModal()">取消</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 添加模态框到页面
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // 添加CSS样式
+            const style = document.createElement('style');
+            style.textContent = `
+                .modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: none;
+                    z-index: 1000;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .modal-overlay.active {
+                    display: flex;
+                }
+                .modal-content {
+                    background: white;
+                    border-radius: 0.5rem;
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                    max-width: 90%;
+                    max-height: 90%;
+                    overflow: auto;
+                }
+                .modal-header {
+                    padding: 1.5rem 1.5rem 1rem;
+                    border-bottom: 1px solid #e2e8f0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .modal-header h3 {
+                    margin: 0;
+                    color: #2d3748;
+                }
+                .btn-close {
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    color: #718096;
+                    cursor: pointer;
+                    padding: 0.25rem;
+                    line-height: 1;
+                }
+                .btn-close:hover {
+                    color: #2d3748;
+                }
+                .modal-body {
+                    padding: 1.5rem;
+                }
+                .modal-footer {
+                    padding: 1rem 1.5rem;
+                    border-top: 1px solid #e2e8f0;
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 0.5rem;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        function closeLinkStandardModal() {
+            const modal = document.getElementById('linkStandardModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        async function searchStandards() {
+            const searchInput = document.getElementById('standardSearch');
+            const query = searchInput.value.trim();
+            const resultsDiv = document.getElementById('standardsSearchResults');
+            
+            if (!query) {
+                resultsDiv.innerHTML = `
+                    <div class="empty-state" style="padding: 2rem 1rem;">
+                        <i class="fas fa-search"></i>
+                        <p>输入关键词搜索技术标准</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                showStatus('正在搜索标准...', 'info');
+                
+                const apiUrl = window.API.getApiUrl(`/standards/search?q=${encodeURIComponent(query)}`);
+                console.log('搜索标准:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`搜索失败: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                const standards = Array.isArray(result) ? result : (result.data || []);
+                
+                if (standards.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="empty-state" style="padding: 2rem 1rem;">
+                            <i class="fas fa-search"></i>
+                            <p>未找到匹配的技术标准</p>
+                        </div>
+                    `;
+                    showStatus('未找到匹配的标准', 'info');
+                    return;
+                }
+                
+                let html = '<div style="display: grid; gap: 0.75rem;">';
+                
+                standards.forEach(standard => {
+                    const standardId = standard.id;
+                    const standardName = standard.name || standard.standard_no || '未命名';
+                    const standardNo = standard.standard_no || standardId;
+                    const category = standard.category || '未知类别';
+                    
+                    html += `
+                        <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; margin-bottom: 0.25rem; color: #2d3748;">${standardName}</div>
+                                <div style="font-size: 0.875rem; color: #718096;">
+                                    编号: ${standardNo} | 类别: ${category}
+                                    ${standard.effective_date ? ` | 生效: ${standard.effective_date}` : ''}
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="linkStandard('${standardId}', '${standardName.replace(/'/g, "\\'")}')" style="white-space: nowrap;">
+                                <i class="fas fa-link"></i> 关联
+                            </button>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                
+                showStatus(`找到 ${standards.length} 个匹配的标准`, 'success');
+                
+            } catch (error) {
+                console.error('搜索标准失败:', error);
+                resultsDiv.innerHTML = `
+                    <div style="background: #fed7d7; color: #742a2a; padding: 1rem; border-radius: 0.5rem;">
+                        <i class="fas fa-exclamation-circle"></i> 搜索失败: ${error.message}
+                    </div>
+                `;
+                showStatus(`搜索失败: ${error.message}`, 'error');
+            }
+        }
+        
+        async function linkStandard(standardId, standardName = '') {
+            try {
+                showStatus('正在创建关联...', 'info');
+                
+                // 正确的API端点：POST /api/mappings
+                const apiUrl = window.API.getApiUrl('/mappings');
+                console.log('创建关联API:', apiUrl);
+                
+                const formData = new FormData();
+                formData.append('sop_id', currentSopId);
+                formData.append('standard_id', standardId);
+                formData.append('relevance_score', '0.8'); // 默认相关性分数
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP错误 ${response.status}: ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('创建关联成功:', result);
+                
+                showStatus(`已成功关联标准 "${standardName || standardId}"`, 'success');
+                
+                // 关闭模态框
+                closeLinkStandardModal();
+                
+                // 重新加载关联标准
+                if (document.getElementById('standardsTab').classList.contains('active')) {
+                    loadLinkedStandards();
+                }
+                
+            } catch (error) {
+                console.error('创建关联失败:', error);
+                alert(`创建关联失败: ${error.message}\n\n可能的原因：\n1. 标准不存在\n2. 关联已存在\n3. 服务器错误`);
+            }
+        }
+        
+        function linkManualStandard() {
+            const manualInput = document.getElementById('manualStandardId');
+            const standardId = manualInput.value.trim();
+            
+            if (!standardId) {
+                alert('请输入标准ID');
+                return;
+            }
+            
+            linkStandard(standardId, `标准ID: ${standardId}`);
+        }
+        
+        async function unlinkStandard(mappingId, standardName) {
+            if (!confirm(`确定要取消与标准 "${standardName}" 的关联吗？`)) {
+                return;
+            }
+            
+            try {
+                showStatus('正在取消关联...', 'info');
+                
+                // 正确的API端点：/api/mappings/{mapping_id}
+                const apiUrl = window.API.getApiUrl(`/mappings/${mappingId}`);
+                console.log('取消关联API:', apiUrl);
+                
+                const response = await fetch(apiUrl, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP错误 ${response.status}: ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('取消关联成功:', result);
+                
+                showStatus(`已成功取消与标准 "${standardName}" 的关联`, 'success');
+                
+                // 重新加载关联标准
+                if (document.getElementById('standardsTab').classList.contains('active')) {
+                    loadLinkedStandards();
+                }
+                
+            } catch (error) {
+                console.error('取消关联失败:', error);
+                alert(`取消关联失败: ${error.message}`);
+            }
+        }
+        
+        // ========== 提取PDF内容 ==========
+        async function extractPDFContent(sopId) {
+            try {
+                showStatus('正在提取PDF内容...', 'info');
+                
+                const apiUrl = window.API.getApiUrl(`/sops/${sopId}/pdf-content`);
+                console.log('提取PDF内容:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('PDF内容提取结果:', result);
+                
+                if (result.status === 'success' && result.data) {
+                    const pdfData = result.data;
+                    
+                    // 显示PDF内容
+                    const contentDiv = document.getElementById('sopContent');
+                    
+                    let contentHTML = `
+                        <div style="background: white; padding: 1.5rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h4 style="margin: 0; color: #2d3748;">
+                                    <i class="fas fa-file-pdf" style="color: #f40f02;"></i> PDF内容提取结果
+                                </h4>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <a href="${window.API.getApiConfig().baseUrl}/api/files/${sopId}/download" target="_blank" class="btn btn-secondary" style="text-decoration: none;">
+                                        <i class="fas fa-download"></i> 下载文件
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                                <div style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
+                                    <div style="font-size: 0.875rem; color: #718096;">文件名称</div>
+                                    <div style="font-weight: 600; margin-top: 0.25rem;">${pdfData.file_name}</div>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
+                                    <div style="font-size: 0.875rem; color: #718096;">总页数</div>
+                                    <div style="font-weight: 600; margin-top: 0.25rem;">${pdfData.total_pages} 页</div>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem;">
+                                    <div style="font-size: 0.875rem; color: #718096;">提取时间</div>
+                                    <div style="font-weight: 600; margin-top: 0.25rem;">${new Date(pdfData.extracted_at).toLocaleString('zh-CN')}</div>
+                                </div>
+                            </div>
+                    `;
+                    
+                    if (pdfData.has_content && pdfData.content_preview) {
+                        contentHTML += `
+                            <div style="margin-bottom: 1.5rem;">
+                                <div style="font-size: 0.875rem; color: #718096; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-check-circle" style="color: #48bb78;"></i> 内容提取成功
+                                    <span style="margin-left: 0.5rem; font-size: 0.75rem; background: #48bb78; color: white; padding: 0.125rem 0.5rem; border-radius: 9999px;">
+                                        ${pdfData.content_length} 字符
+                                    </span>
+                                </div>
+                                <div style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; max-height: 300px; overflow-y: auto;">
+                                    <div style="white-space: pre-wrap; line-height: 1.6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                                        ${pdfData.content_preview.replace(/[<>]/g, '')}
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #718096; margin-top: 0.5rem; text-align: right;">
+                                    显示前${Math.min(pdfData.content_length, 500)}个字符
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHTML += `
+                            <div style="text-align: center; padding: 2rem; color: #718096;">
+                                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #ed8936; margin-bottom: 1rem;"></i>
+                                <h4 style="margin: 0 0 0.5rem 0;">未提取到文本内容</h4>
+                                <p>PDF文件可能不包含可提取的文本，或者文件格式不支持。</p>
+                            </div>
+                        `;
+                    }
+                    
+                    contentHTML += `
+                            <div style="border-top: 1px solid #e2e8f0; padding-top: 1rem; font-size: 0.875rem; color: #718096;">
+                                <p><strong>说明:</strong>PDF内容提取功能使用pdfplumber库，可以提取PDF中的文本内容。如果PDF是扫描件或图片格式，可能无法提取文本。</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    contentDiv.innerHTML = contentHTML;
+                    showStatus('PDF内容提取完成', 'success');
+                } else {
+                    throw new Error(result.message || '提取失败');
+                }
+                
+            } catch (error) {
+                console.error('提取PDF内容失败:', error);
+                showStatus(`提取失败: ${error.message}`, 'error');
+                
+                // 显示错误信息
+                const contentDiv = document.getElementById('sopContent');
+                contentDiv.innerHTML = `
+                    <div style="background: #fed7d7; color: #c53030; padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #e53e3e;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <h4 style="margin: 0;">PDF内容提取失败</h4>
+                        </div>
+                        <p style="margin: 0 0 1rem 0;">${error.message}</p>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-primary" onclick="extractPDFContent('${sopId}')">
+                                <i class="fas fa-redo"></i> 重试
+                            </button>
+                            <a href="${window.API.getApiConfig().baseUrl}/api/files/${sopId}/download" target="_blank" class="btn btn-secondary" style="text-decoration: none;">
+                                <i class="fas fa-download"></i> 直接下载
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // ========== AI审核功能 ==========
+        async function startAIaudit() {
+            try {
+                console.log('=== 开始执行 startAIaudit 函数 ===');
+                console.log('当前SOP ID:', currentSopId);
+                
+                showStatus('正在启动AI审核...', 'info');
+                
+                // 切换到AI审核标签页
+                const aiAuditTab = document.querySelector('[data-tab="aiAudit"]');
+                if (aiAuditTab) {
+                    console.log('找到AI审核标签页按钮，点击切换...');
+                    aiAuditTab.click();
+                } else {
+                    console.warn('AI审核标签页按钮未找到');
+                }
+                
+                // 显示审核界面
+                showAuditInterface();
+                
+                // 直接调用增强版API，不跳转到其他页面
+                const apiUrl = 'http://localhost:8002/api/ai-audit/start';
+                console.log('启动AI审核，API地址:', apiUrl);
+                
+                const requestBody = {
+                    sop_id: currentSopId,
+                    force_new: true,
+                    auditor: 'SOP详情页面',
+                    priority: 'normal'
+                };
+                
+                console.log('请求体:', JSON.stringify(requestBody, null, 2));
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                console.log('API响应状态:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API错误响应:', errorText);
+                    throw new Error(`启动审核任务失败 (${response.status}): ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('API成功响应:', JSON.stringify(result, null, 2));
+                
+                if (!result.task_id) {
+                    console.error('API响应缺少task_id:', result);
+                    throw new Error('API响应异常：未收到任务ID');
+                }
+                
+                console.log('AI审核任务创建成功，任务ID:', result.task_id);
+                
+                // 保存任务ID到localStorage，以便页面刷新后还能知道有任务在进行
+                const activeTasks = JSON.parse(localStorage.getItem('activeAuditTasks') || '{}');
+                activeTasks[currentSopId] = {
+                    taskId: result.task_id,
+                    startTime: new Date().toISOString(),
+                    sopId: currentSopId
+                };
+                localStorage.setItem('activeAuditTasks', JSON.stringify(activeTasks));
+                console.log('任务已保存到localStorage');
+                
+                // 显示成功提示
+                showStatus('AI审核任务已成功启动，正在处理中...', 'success');
+                
+                // 开始轮询审核进度
+                pollAuditProgress(result.task_id);
+                
+            } catch (error) {
+                console.error('启动AI审核失败:', error);
+                alert(`启动AI审核失败: ${error.message}\n\n请检查AI审核API服务是否正常运行。`);
+            }
+        }
+        
+        // 显示审核界面
+        function showAuditInterface() {
+            // 隐藏无审核记录部分
+            document.getElementById('noAuditSection').style.display = 'none';
+            
+            // 显示审核状态和进度
+            document.getElementById('auditStatusSection').style.display = 'block';
+            document.getElementById('auditProgressSection').style.display = 'block';
+            
+            // 显示审核正在进行中的提示
+            const progressText = document.getElementById('auditProgressText');
+            if (progressText) {
+                progressText.textContent = 'AI审核已启动，正在处理中...（这可能需要几分钟时间）';
+            }
+            
+            // 隐藏审核结果（如果有）
+            document.getElementById('auditResultsSection').style.display = 'none';
+            
+            // 更新状态
+            document.getElementById('auditStatus').textContent = '处理中';
+            document.getElementById('auditStatus').style.color = '#1890ff';
+            
+            // 重置进度
+            updateAuditProgress(0, '正在启动AI审核...');
+        }
+        
+        // 更新审核进度
+        function updateAuditProgress(progress, message) {
+            const progressBar = document.getElementById('auditProgressBar');
+            const progressPercent = document.getElementById('auditProgressPercent');
+            const progressText = document.getElementById('auditProgressText');
+            
+            if (progressBar) {
+                progressBar.style.width = `${progress}%`;
+                progressPercent.textContent = `${progress}%`;
+                progressText.textContent = message;
+            }
+        }
+        
+        // 显示审核结果
+        function showAuditResults(result) {
+            console.log('=== 显示审核结果 (修复版) ===');
+            console.log('原始结果:', result);
+            
+            // 检查DOM元素
+            const progressSection = document.getElementById('auditProgressSection');
+            const resultsSection = document.getElementById('auditResultsSection');
+            const auditStatus = document.getElementById('auditStatus');
+            
+            console.log('进度部分:', progressSection);
+            console.log('结果部分:', resultsSection);
+            console.log('审核状态:', auditStatus);
+            
+            if (!progressSection || !resultsSection || !auditStatus) {
+                console.error('必要的DOM元素未找到');
+                alert('无法显示审核结果：页面元素缺失。请刷新页面重试。');
+                return;
+            }
+            
+            // 修复1: 确保进度条显示100%完成
+            updateAuditProgress(100, '审核完成！');
+            
+            // 修复2: 延迟隐藏进度条，让用户看到完成状态
+            setTimeout(() => {
+                // 隐藏进度部分
+                progressSection.style.display = 'none';
+                
+                // 显示结果部分
+                resultsSection.style.display = 'block';
+                
+                // 解析审核结果
+                const apiResult = result.result || result;
+                const auditData = apiResult.audit_result || {};
+                const auditSummary = auditData.audit_summary || {};
+                const itemizedAudit = auditData.itemized_audit || [];
+                
+                console.log('解析后的结果:', {
+                    apiResult,
+                    auditData,
+                    auditSummary,
+                    itemizedAuditCount: itemizedAudit.length
+                });
+                
+                // 更新状态
+                auditStatus.textContent = '已完成';
+                auditStatus.style.color = '#52c41a';
+                
+                const overallCompliance = document.getElementById('overallCompliance');
+                const auditItemsCount = document.getElementById('auditItemsCount');
+                const auditTime = document.getElementById('auditTime');
+                
+                if (overallCompliance) {
+                    overallCompliance.textContent = auditSummary.overall_compliance || '未知';
+                }
+                
+                if (auditItemsCount) {
+                    auditItemsCount.textContent = `${itemizedAudit.length} 条`;
+                }
+                
+                if (auditTime) {
+                    auditTime.textContent = new Date().toLocaleString('zh-CN');
+                }
+                
+                // 生成审核结果表格
+                generateAuditResultsTable(itemizedAudit);
+                
+                // 生成审核摘要
+                generateAuditSummary(itemizedAudit);
+                
+                // 更新SOP的审核状态
+                if (currentSopData) {
+                    currentSopData.audit_status = 'completed';
+                    currentSopData.audit_score = calculateAuditScore(itemizedAudit);
+                    displaySOPData();
+                }
+                
+                // 刷新审核记录
+                loadAuditHistory();
+                
+                console.log('审核结果显示完成');
+            }, 1000); // 延迟1秒执行上面的代码
+        }
+        
+        // 生成审核结果表格
+        function generateAuditResultsTable(itemizedAudit) {
+            const tableContainer = document.getElementById('auditResultsTable');
+            
+            if (itemizedAudit.length === 0) {
+                tableContainer.innerHTML = `
+                    <div style="padding: 2rem; text-align: center; color: #718096;">
+                        <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                        <p>未找到审核结果</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 统计符合性
+            let compliantCount = 0;
+            let partialCount = 0;
+            let nonCompliantCount = 0;
+            
+            itemizedAudit.forEach(item => {
+                const status = item.compliance_status || item.compliance || '未知';
+                if (status.includes('符合') && !status.includes('部分') && !status.includes('不符合')) {
+                    compliantCount++;
+                } else if (status.includes('部分符合')) {
+                    partialCount++;
+                } else if (status.includes('不符合')) {
+                    nonCompliantCount++;
+                }
+            });
+            
+            let tableHTML = `
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                        <thead>
+                            <tr style="background: #f8f9fa;">
+                                <th style="padding: 1rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0; width: 60px;">序号</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0;">技术标准章节</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0; width: 200px;">核心要求摘要</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0; width: 300px;">操作规程对应内容</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0; width: 200px;">审核意见</th>
+                                <th style="padding: 1rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0; width: 100px;">符合状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            itemizedAudit.forEach((item, index) => {
+                const status = item.compliance_status || item.compliance || '未知';
+                let statusClass = '';
+                let statusColor = '';
+                
+                if (status.includes('符合') && !status.includes('部分') && !status.includes('不符合')) {
+                    statusClass = 'status-compliant';
+                    statusColor = '#c6f6d5';
+                } else if (status.includes('部分符合')) {
+                    statusClass = 'status-partial';
+                    statusColor = '#feebc8';
+                } else if (status.includes('不符合')) {
+                    statusClass = 'status-non-compliant';
+                    statusColor = '#fed7d7';
+                }
+                
+                // 截断过长的内容
+                const requirementSummary = (item.requirement_summary || '无').substring(0, 100);
+                const sopContent = (item.sop_content || '未找到对应内容').substring(0, 150);
+                const auditOpinion = (item.audit_opinion || '无评价').substring(0, 100);
+                
+                tableHTML += `
+                    <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.2s;">
+                        <td style="padding: 1rem; color: #718096;">${index + 1}</td>
+                        <td style="padding: 1rem;">
+                            <div style="font-weight: 600; color: #2d3748;">${item.standard_section || item.standard_clause || '标准条款'}</div>
+                            <div style="font-size: 0.875rem; color: #718096; margin-top: 0.25rem;">标准: ${item.standard_no || '未知'}</div>
+                        </td>
+                        <td style="padding: 1rem; color: #4a5568;">${requirementSummary}${(item.requirement_summary || '').length > 100 ? '...' : ''}</td>
+                        <td style="padding: 1rem; color: #4a5568;">
+                            <div style="max-height: 100px; overflow-y: auto; padding-right: 0.5rem;">
+                                ${sopContent}${(item.sop_content || '').length > 150 ? '...' : ''}
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; color: #4a5568;">${auditOpinion}${(item.audit_opinion || '').length > 100 ? '...' : ''}</td>
+                        <td style="padding: 1rem;">
+                            <span style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: ${statusColor};">
+                                ${status}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            tableContainer.innerHTML = tableHTML;
+        }
+        
+        // 生成审核摘要
+        function generateAuditSummary(itemizedAudit) {
+            const summaryContainer = document.getElementById('auditSummary');
+            
+            // 统计符合性
+            let compliantCount = 0;
+            let partialCount = 0;
+            let nonCompliantCount = 0;
+            
+            itemizedAudit.forEach(item => {
+                const status = item.compliance_status || item.compliance || '未知';
+                if (status.includes('符合') && !status.includes('部分') && !status.includes('不符合')) {
+                    compliantCount++;
+                } else if (status.includes('部分符合')) {
+                    partialCount++;
+                } else if (status.includes('不符合')) {
+                    nonCompliantCount++;
+                }
+            });
+            
+            const totalCount = itemizedAudit.length;
+            const compliantRate = totalCount > 0 ? Math.round((compliantCount / totalCount) * 100) : 0;
+            const partialRate = totalCount > 0 ? Math.round((partialCount / totalCount) * 100) : 0;
+            const nonCompliantRate = totalCount > 0 ? Math.round((nonCompliantCount / totalCount) * 100) : 0;
+            
+            summaryContainer.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>审核统计:</strong> 共 ${totalCount} 项审核
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <span style="color: #38a169;">
+                            <i class="fas fa-check-circle"></i> 符合: ${compliantCount} (${compliantRate}%)
+                        </span>
+                        <span style="color: #ed8936;">
+                            <i class="fas fa-exclamation-circle"></i> 部分符合: ${partialCount} (${partialRate}%)
+                        </span>
+                        <span style="color: #e53e3e;">
+                            <i class="fas fa-times-circle"></i> 不符合: ${nonCompliantCount} (${nonCompliantRate}%)
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 计算审核分数
+        function calculateAuditScore(itemizedAudit) {
+            if (itemizedAudit.length === 0) return 0;
+            
+            let totalScore = 0;
+            itemizedAudit.forEach(item => {
+                const status = item.compliance_status || item.compliance || '未知';
+                if (status.includes('符合') && !status.includes('部分') && !status.includes('不符合')) {
+                    totalScore += 100;
+                } else if (status.includes('部分符合')) {
+                    totalScore += 60;
+                } else if (status.includes('不符合')) {
+                    totalScore += 0;
+                } else {
+                    totalScore += 50; // 未知状态给50分
+                }
+            });
+            
+            return Math.round(totalScore / itemizedAudit.length);
+        }
+        
+        // 显示审核错误
+        function showAuditError(errorMsg) {
+            // 隐藏进度部分
+            document.getElementById('auditProgressSection').style.display = 'none';
+            
+            // 更新状态
+            document.getElementById('auditStatus').textContent = '失败';
+            document.getElementById('auditStatus').style.color = '#e53e3e';
+            
+            // 显示错误信息
+            const resultsSection = document.getElementById('auditResultsSection');
+            resultsSection.style.display = 'block';
+            resultsSection.innerHTML = `
+                <div style="background: #fed7d7; color: #742a2a; padding: 1.5rem; border-radius: 0.5rem; border-left: 4px solid #e53e3e;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h4 style="margin: 0;">AI审核失败</h4>
+                    </div>
+                    <p style="margin: 0 0 1rem 0;">${errorMsg}</p>
+                    <button class="btn btn-primary" onclick="startAIaudit()">
+                        <i class="fas fa-redo"></i> 重试
+                    </button>
+                </div>
+            `;
+        }
+        
+        // 轮询审核进度
+        async function pollAuditProgress(taskId) {
+            console.log('=== 开始轮询审核进度 ===');
+            console.log('任务ID:', taskId);
+            
+            let attempts = 0;
+            const maxAttempts = 120; // 最多等待10分钟（AI审核可能需要较长时间）
+            const pollingInterval = 5000; // 5秒轮询一次
+            
+            // 开始轮询
+            const intervalId = setInterval(async () => {
+                attempts++;
+                console.log(`轮询第 ${attempts} 次，任务ID: ${taskId}`);
+                
+                try {
+                    const statusUrl = `http://localhost:8002/api/ai-audit/status/${taskId}`;
+                    console.log('轮询URL:', statusUrl);
+                    
+                    const response = await fetch(statusUrl);
+                    console.log('响应状态:', response.status, response.statusText);
+                    
+                    if (!response.ok) {
+                        throw new Error(`获取任务状态失败 (${response.status})`);
+                    }
+                    
+                    const taskStatus = await response.json();
+                    console.log('任务状态:', taskStatus.status);
+                    console.log('任务进度:', taskStatus.progress);
+                    
+                    // 更新进度
+                    const progress = taskStatus.progress || Math.min(10 + Math.floor(attempts / maxAttempts * 80), 90);
+                    const message = taskStatus.step || taskStatus.status_message || '正在处理...';
+                    
+                    console.log('更新进度:', progress, message);
+                    updateAuditProgress(progress, message);
+                    
+                    // 检查任务状态
+                    if (taskStatus.status === 'completed') {
+                        console.log('任务完成，显示结果...');
+                        clearInterval(intervalId);
+                        updateAuditProgress(100, '审核完成！');
+                        
+                        // 清除localStorage中的任务记录
+                        const activeTasks = JSON.parse(localStorage.getItem('activeAuditTasks') || '{}');
+                        delete activeTasks[currentSopId];
+                        localStorage.setItem('activeAuditTasks', JSON.stringify(activeTasks));
+                        console.log('任务已从localStorage中清除');
+                        
+                        // 等待一小段时间确保结果已保存
+                        setTimeout(async () => {
+                            try {
+                                console.log('获取最终结果...');
+                                const finalStatus = await fetch(statusUrl).then(r => r.json());
+                                console.log('最终结果:', finalStatus);
+                                showAuditResults(finalStatus.result || finalStatus);
+                            } catch (finalError) {
+                                console.error('获取最终结果失败:', finalError);
+                                showAuditResults(taskStatus.result || taskStatus);
+                            }
+                        }, 1000);
+                        
+                    } else if (taskStatus.status === 'failed') {
+                        console.log('任务失败:', taskStatus.error);
+                        clearInterval(intervalId);
+                        
+                        // 清除localStorage中的任务记录
+                        const activeTasks = JSON.parse(localStorage.getItem('activeAuditTasks') || '{}');
+                        delete activeTasks[currentSopId];
+                        localStorage.setItem('activeAuditTasks', JSON.stringify(activeTasks));
+                        console.log('失败任务已从localStorage中清除');
+                        
+                        const errorMsg = taskStatus.error || taskStatus.error_message || '审核任务失败';
+                        showAuditError(errorMsg);
+                    }
+                    
+                    // 检查超时
+                    if (attempts >= maxAttempts) {
+                        console.log('轮询超时');
+                        clearInterval(intervalId);
+                        showAuditError('审核任务超时，请稍后重试');
+                    }
+                    
+                } catch (error) {
+                    console.error('轮询失败:', error);
+                    
+                    // 检查超时
+                    if (attempts >= maxAttempts) {
+                        clearInterval(intervalId);
+                        showAuditError('审核任务超时，请稍后重试');
+                    }
+                }
+            }, pollingInterval);
+            
+            // 初始进度
+            console.log('设置初始进度');
+            updateAuditProgress(10, '正在启动AI审核...');
+        }
+        
+        // ========== 清除缓存并刷新 ==========
+        function clearCacheAndReload() {
+            if (confirm('这将清除页面缓存并重新加载页面。确定要继续吗？')) {
+                // 尝试清除缓存
+                if ('caches' in window) {
+                    caches.keys().then(function(names) {
+                        for (let name of names) {
+                            caches.delete(name);
+                        }
+                        console.log('缓存已清除');
+                    });
+                }
+                
+                // 强制重新加载
+                window.location.reload(true);
+            }
+        }
+        
+        // ========== 查看审核详情 ==========
+        async function viewAuditDetail(taskId) {
+            try {
+                showStatus('正在加载审核详情...', 'info');
+                
+                const apiUrl = `http://localhost:8002/api/ai-audit/status/${taskId}`;
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`加载审核详情失败: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.status === 'completed' && result.result) {
+                    // 显示审核详情
+                    showAuditDetailModal(result.result);
+                } else {
+                    alert(`审核任务状态: ${result.status}\n${result.error || '无法查看详情'}`);
+                }
+                
+            } catch (error) {
+                console.error('查看审核详情失败:', error);
+                alert(`加载审核详情失败: ${error.message}`);
+            }
+        }
+        
+        // 显示审核详情模态框
+        function showAuditDetailModal(auditResult) {
+            // 创建模态框
+            const modalId = 'auditDetailModal';
+            let modal = document.getElementById(modalId);
+            
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = modalId;
+                modal.className = 'audit-detail-modal';
+                document.body.appendChild(modal);
+            }
+            
+            const auditData = auditResult.audit_result || {};
+            const auditSummary = auditData.audit_summary || {};
+            const itemizedAudit = auditData.itemized_audit || [];
+            const suggestions = auditData.improvement_suggestions || [];
+            
+            // 计算统计
+            let compliantCount = 0;
+            let partialCount = 0;
+            let nonCompliantCount = 0;
+            
+            itemizedAudit.forEach(item => {
+                const status = item.compliance_status || '';
+                if (status.includes('符合') && !status.includes('部分') && !status.includes('不符合')) {
+                    compliantCount++;
+                } else if (status.includes('部分符合')) {
+                    partialCount++;
+                } else if (status.includes('不符合')) {
+                    nonCompliantCount++;
+                }
+            });
+            
+            const totalItems = itemizedAudit.length;
+            const complianceRate = totalItems > 0 ? Math.round((compliantCount / totalItems) * 100) : 0;
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>AI审核详情</h2>
+                        <button class="modal-close" onclick="closeAuditDetailModal()">&times;</button>
+                    </div>
+                    
+                    <div class="modal-body">
+                        <div class="audit-overview">
+                            <div class="overview-item">
+                                <div class="overview-label">SOP名称</div>
+                                <div class="overview-value">${auditResult.sop_info?.name || auditResult.sop_id}</div>
+                            </div>
+                            <div class="overview-item">
+                                <div class="overview-label">审核员</div>
+                                <div class="overview-value">${auditResult.auditor || 'AI智能审核系统'}</div>
+                            </div>
+                            <div class="overview-item">
+                                <div class="overview-label">审核时间</div>
+                                <div class="overview-value">${new Date(auditResult.audit_date).toLocaleString('zh-CN')}</div>
+                            </div>
+                            <div class="overview-item">
+                                <div class="overview-label">总体符合率</div>
+                                <div class="overview-value score-${complianceRate >= 90 ? 'high' : complianceRate >= 70 ? 'medium' : complianceRate >= 50 ? 'low' : 'poor'}">
+                                    ${complianceRate}%
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="compliance-summary">
+                            <h3>符合性统计</h3>
+                            <div class="stats-grid">
+                                <div class="stat-card stat-compliant">
+                                    <div class="stat-count">${compliantCount}</div>
+                                    <div class="stat-label">符合</div>
+                                </div>
+                                <div class="stat-card stat-partial">
+                                    <div class="stat-count">${partialCount}</div>
+                                    <div class="stat-label">部分符合</div>
+                                </div>
+                                <div class="stat-card stat-noncompliant">
+                                    <div class="stat-count">${nonCompliantCount}</div>
+                                    <div class="stat-label">不符合</div>
+                                </div>
+                                <div class="stat-card stat-total">
+                                    <div class="stat-count">${totalItems}</div>
+                                    <div class="stat-label">总条款</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${itemizedAudit.length > 0 ? `
+                        <div class="audit-items">
+                            <h3>逐条款审核结果</h3>
+                            <div class="items-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th width="60">序号</th>
+                                            <th>技术标准章节</th>
+                                            <th>标准要求摘要</th>
+                                            <th>SOP对应内容</th>
+                                            <th>审核意见</th>
+                                            <th width="100">符合性状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${itemizedAudit.map((item, index) => `
+                                            <tr>
+                                                <td>${index + 1}</td>
+                                                <td>${item.standard_section || '-'}</td>
+                                                <td>${item.requirement_summary || '-'}</td>
+                                                <td>${item.sop_content || '-'}</td>
+                                                <td>${item.audit_opinion || '-'}</td>
+                                                <td>
+                                                    <span class="compliance-badge ${item.compliance_status?.includes('符合') && !item.compliance_status?.includes('部分') && !item.compliance_status?.includes('不符合') ? 'badge-compliant' : item.compliance_status?.includes('部分符合') ? 'badge-partial' : 'badge-noncompliant'}">
+                                                        ${item.compliance_status || '未知'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${suggestions.length > 0 ? `
+                        <div class="improvement-suggestions">
+                            <h3>改进建议</h3>
+                            <ul>
+                                ${suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closeAuditDetailModal()">关闭</button>
+                        <button class="btn btn-primary" onclick="exportAuditReport('${auditResult.audit_id || auditResult.sop_id}')">
+                            <i class="fas fa-download"></i> 导出报告
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+        
+        // 关闭审核详情模态框
+        function closeAuditDetailModal() {
+            const modal = document.getElementById('auditDetailModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // ========== 查看审核明细 ==========
+        async function viewAuditDetails(auditId) {
+            try {
+                showStatus('正在加载审核明细...', 'info');
+                
+                const apiUrl = window.API.getApiUrl(`/audit-details/${auditId}`);
+                console.log('加载审核明细:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showAuditDetailsModal(result.data);
+                } else {
+                    throw new Error(result.message || '加载审核明细失败');
+                }
+                
+            } catch (error) {
+                console.error('查看审核明细失败:', error);
+                alert(`加载审核明细失败: ${error.message}`);
+            }
+        }
+        
+        // 显示审核明细模态框
+        function showAuditDetailsModal(data) {
+            const modalId = 'auditDetailsModal';
+            let modal = document.getElementById(modalId);
+            
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = modalId;
+                modal.className = 'audit-details-modal';
+                document.body.appendChild(modal);
+            }
+            
+            const auditInfo = data.audit_info || {};
+            const details = data.details || [];
+            const stats = data.statistics || {};
+            
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 1000px; max-height: 90vh;">
+                    <div class="modal-header">
+                        <h2>审核明细 - ${auditInfo.sop_id}</h2>
+                        <button class="modal-close" onclick="closeAuditDetailsModal()">&times;</button>
+                    </div>
+                    
+                    <div class="modal-body" style="overflow-y: auto;">
+                        <div class="audit-info-section" style="background: #f8f9fa; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                <div>
+                                    <div style="font-size: 0.875rem; color: #718096;">审核ID</div>
+                                    <div style="font-weight: 600;">${auditInfo.id}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.875rem; color: #718096;">审核日期</div>
+                                    <div style="font-weight: 600;">${auditInfo.audit_date}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.875rem; color: #718096;">审核人</div>
+                                    <div style="font-weight: 600;">${auditInfo.auditor || '未知'}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.875rem; color: #718096;">总体分数</div>
+                                    <div style="font-weight: 600; color: ${auditInfo.overall_score >= 90 ? '#38a169' : auditInfo.overall_score >= 70 ? '#ed8936' : '#e53e3e'}">
+                                        ${auditInfo.overall_score || 0}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="statistics-section" style="margin-bottom: 1.5rem;">
+                            <h3 style="margin-bottom: 1rem;">统计信息</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                                <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">
+                                    <div style="font-size: 0.875rem; color: #718096;">明细数量</div>
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #2d3748;">${stats.total_details || 0}</div>
+                                </div>
+                                <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">
+                                    <div style="font-size: 0.875rem; color: #718096;">平均分数</div>
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #2d3748;">${stats.average_score || 0}</div>
+                                </div>
+                                <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">
+                                    <div style="font-size: 0.875rem; color: #718096;">最高分数</div>
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #38a169;">${stats.max_score || 0}</div>
+                                </div>
+                                <div style="background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; text-align: center;">
+                                    <div style="font-size: 0.875rem; color: #718096;">最低分数</div>
+                                    <div style="font-size: 1.5rem; font-weight: 600; color: #e53e3e;">${stats.min_score || 0}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="details-section">
+                            <h3 style="margin-bottom: 1rem;">审核明细 (${details.length} 项)</h3>
+                            ${details.length > 0 ? `
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0; width: 50px;">序号</th>
+                                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0;">标准ID</th>
+                                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0;">SOP条款</th>
+                                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0;">标准条款</th>
+                                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0; width: 100px;">符合性分数</th>
+                                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0;">审核意见</th>
+                                                <th style="padding: 0.75rem; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0;">改进建议</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${details.map((detail, index) => {
+                                                const score = detail.compliance_score || 0;
+                                                let scoreColor = '#e53e3e';
+                                                if (score >= 0.8) scoreColor = '#38a169';
+                                                else if (score >= 0.6) scoreColor = '#ed8936';
+                                                
+                                                return `
+                                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                                        <td style="padding: 0.75rem; color: #718096;">${index + 1}</td>
+                                                        <td style="padding: 0.75rem; color: #2d3748;">${detail.standard_id}</td>
+                                                        <td style="padding: 0.75rem; color: #4a5568;">${detail.sop_clause || '-'}</td>
+                                                        <td style="padding: 0.75rem; color: #4a5568;">${detail.standard_clause || '-'}</td>
+                                                        <td style="padding: 0.75rem;">
+                                                            <span style="display: inline-block; padding: 0.25rem 0.5rem; border-radius: 0.25rem; background: ${scoreColor}; color: white; font-weight: 600;">
+                                                                ${score.toFixed(2)}
+                                                            </span>
+                                                        </td>
+                                                        <td style="padding: 0.75rem; color: #4a5568; max-width: 200px;">${detail.comments || '无'}</td>
+                                                        <td style="padding: 0.75rem; color: #4a5568; max-width: 200px;">${detail.recommendations || '无'}</td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ` : `
+                                <div style="text-align: center; padding: 2rem; color: #718096;">
+                                    <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                                    <p>暂无审核明细</p>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer" style="padding: 1rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button class="btn btn-secondary" onclick="closeAuditDetailsModal()">关闭</button>
+                        <button class="btn btn-primary" onclick="exportAuditDetails(${auditInfo.id})">
+                            <i class="fas fa-download"></i> 导出明细
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+            
+            // 添加模态框样式
+            addAuditDetailsModalStyles();
+        }
+        
+        // 关闭审核明细模态框
+        function closeAuditDetailsModal() {
+            const modal = document.getElementById('auditDetailsModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // 导出审核明细
+        function exportAuditDetails(auditId) {
+            alert(`导出审核明细功能开发中...\n审核ID: ${auditId}`);
+            // 这里可以添加导出Excel或CSV的功能
+        }
+        
+        // 添加审核明细模态框样式
+        function addAuditDetailsModalStyles() {
+            const styleId = 'audit-details-modal-styles';
+            if (document.getElementById(styleId)) return;
+            
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                .audit-details-modal {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: none;
+                    z-index: 1000;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .audit-details-modal .modal-content {
+                    background: white;
+                    border-radius: 0.5rem;
+                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                    display: flex;
+                    flex-direction: column;
+                }
+                
+                .audit-details-modal .modal-header {
+                    padding: 1.5rem 1.5rem 1rem;
+                    border-bottom: 1px solid #e2e8f0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .audit-details-modal .modal-header h2 {
+                    margin: 0;
+                    color: #2d3748;
+                    font-size: 1.25rem;
+                }
+                
+                .audit-details-modal .modal-close {
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    color: #718096;
+                    cursor: pointer;
+                    padding: 0.25rem;
+                    line-height: 1;
+                }
+                
+                .audit-details-modal .modal-close:hover {
+                    color: #2d3748;
+                }
+                
+                .audit-details-modal .modal-body {
+                    flex: 1;
+                    padding: 1.5rem;
+                }
+                
+                .audit-details-modal .modal-footer {
+                    padding: 1rem 1.5rem;
+                    border-top: 1px solid #e2e8f0;
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 0.5rem;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // 添加审核记录列表样式
+        function addAuditStyles() {
+            const styleId = 'audit-list-styles';
+            if (document.getElementById(styleId)) return;
+            
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                .audit-records {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+                
+                .audit-item {
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 0.5rem;
+                    padding: 1.25rem;
+                    transition: box-shadow 0.2s;
+                }
+                
+                .audit-item:hover {
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                }
+                
+                .audit-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 0.75rem;
+                }
+                
+                .audit-title {
+                    flex: 1;
+                }
+                
+                .audit-title strong {
+                    font-size: 1.125rem;
+                    color: #2d3748;
+                    display: block;
+                    margin-bottom: 0.25rem;
+                }
+                
+                .audit-time {
+                    font-size: 0.875rem;
+                    color: #718096;
+                }
+                
+                .audit-score {
+                    text-align: center;
+                    padding: 0.5rem 0.75rem;
+                    border-radius: 0.375rem;
+                    min-width: 80px;
+                }
+                
+                .score-high {
+                    background: #c6f6d5;
+                    color: #22543d;
+                }
+                
+                .score-medium {
+                    background: #fed7d7;
+                    color: #742a2a;
+                }
+                
+                .score-low {
+                    background: #feebc8;
+                    color: #744210;
+                }
+                
+                .score-poor {
+                    background: #fed7d7;
+                    color: #742a2a;
+                }
+                
+                .score-value {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    line-height: 1;
+                }
+                
+                .score-text {
+                    font-size: 0.75rem;
+                    margin-top: 0.25rem;
+                    opacity: 0.9;
+                }
+                
+                .audit-meta {
+                    display: flex;
+                    gap: 1rem;
+                    font-size: 0.875rem;
+                    color: #718096;
+                    margin-bottom: 0.75rem;
+                }
+                
+                .audit-summary {
+                    color: #4a5568;
+                    line-height: 1.5;
+                    margin-bottom: 1rem;
+                    padding: 0.75rem;
+                    background: #f8f9fa;
+                    border-radius: 0.375rem;
+                    border-left: 3px solid #4299e1;
+                }
+                
+                .audit-footer {
+                    display: flex;
+                    justify-content: flex-end;
+                }
+                
+                .btn-view-detail {
+                    background: #4299e1;
+                    color: white;
+                    border: none;
+                    padding: 0.5rem 1rem;
+                    border-radius: 0.375rem;
+                    font-size: 0.875rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    transition: background 0.2s;
+                }
+                
+                .btn-view-detail:hover {
+                    background: #3182ce;
+                }
+                
+                .btn-view-detail i {
+                    font-size: 0.875rem;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // 导出审核报告
+        function exportAuditReport(auditId) {
+            alert(`导出审核报告功能开发中...\n审核ID: ${auditId}`);
+            // 这里可以添加导出PDF或Word报告的功能
+        }
+        
+        // 添加审核记录CSS样式
+        function addAuditStyles() {
+            const styleId = 'audit-styles';
+            if (document.getElementById(styleId)) return;
+            
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+                /* 审核记录样式 */
+                .audit-records {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1rem;
+                }
+                
+                .audit-item {
+                    background: white;
+                    border-radius: 0.5rem;
+                    border: 1px solid #e2e8f0;
+                    padding: 1.5rem;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                
+                .audit-item:hover {
+                    border-color: #4299e1;
+                    box-shadow: 0 2px 8px rgba(66, 153, 225, 0.15);
+                }
+                
+                .audit-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 1rem;
+                }
+                
+                .audit-title {
+                    flex: 1;
+                }
+                
+                .audit-title strong {
+                    display: block;
+                    font-size: 1.1rem;
+                    color: #2d3748;
+                    margin-bottom: 0.25rem;
+                }
+                
+                .audit-time {
+                    font-size: 0.875rem;
+                    color: #718096;
+                }
+                
+                .audit-score {
+                    text-align: center;
+                    padding: 0.5rem 1rem;
+                    border-radius: 0.5rem;
+                    min-width: 80px;
+                }
+                
+                .score-high {
+                    background: #c6f6d5;
+                    color: #22543d;
+                }
+                
+                .score-medium {
+                    background: #fed7d7;
+                    color: #742a2a;
+                }
+                
+                .score-low {
+                    background: #feebc8;
+                    color: #744210;
+                }
+                
+                .score-poor {
+                    background: #fed7d7;
+                    color: #742a2a;
+                }
+                
+                .score-value {
+                    font-size: 1.5rem;
+                    font-weight: bold;
+                }
+                
+                .score-text {
+                    font-size: 0.875rem;
+                }
+                
+                .audit-meta {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 1rem;
+                    margin-bottom: 1rem;
+                }
+                
+                .meta-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-size: 0.875rem;
+                    color: #4a5568;
+                }
+                
+                .compliance-stats {
+                    display: flex;
+                    gap: 1rem;
+                    margin-bottom: 1rem;
+                }
+                
+                .stat-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.5rem 1rem;
+                    border-radius: 0.25rem;
+                    font-size: 0.875rem;
+                }
+                
+                .stat-compliant {
+                    background: #c6f6d5;
+                    color: #22543d;
+                }
+                
+                .stat-partial {
+                    background: #feebc8;
+                    color: #744210;
+                }
+                
+                .stat-noncompliant {
+                    background: #fed7d7;
+                    color: #742a2a;
+                }
+                
+                .audit-summary {
+                    background: #f7fafc;
+                    padding: 1rem;
+                    border-radius: 0.5rem;
+                    font-size: 0.875rem;
+                    color: #4a5568;
+                    margin-bottom: 1rem;
+                }
+                
+                .audit-footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding-top: 1rem;
+                    border-top: 1px solid #e2e8f0;
+                }
+                
+                .btn-view-detail {
+                    background: #4299e1;
+                    color: white;
+                    border: none;
+                    padding: 0.5rem 1rem;
+                    border-radius: 0.25rem;
+                    cursor: pointer;
+                    font-size: 0.875rem;
+                }
+                
+                .btn-view-detail:hover {
+                    background: #3182ce;
+                }
+                
+                .task-id {
+                    font-size: 0.75rem;
+                    color: #a0aec0;
+                    font-family: monospace;
+                }
+                
+                /* 审核详情模态框样式 */
+                .audit-detail-modal {
+                    display: none;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.5);
+                    z-index: 1000;
+                    overflow-y: auto;
+                }
+                
+                .modal-content {
+                    background: white;
+                    margin: 2rem auto;
+                    max-width: 1000px;
+                    border-radius: 0.5rem;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                }
+                
+                .modal-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 1.5rem;
+                    border-bottom: 1px solid #e2e8f0;
+                }
+                
+                .modal-header h2 {
+                    margin: 0;
+                    color: #2d3748;
+                }
+                
+                .modal-close {
+                    background: none;
+                    border: none;
+                    font-size: 1.5rem;
+                    cursor: pointer;
+                    color: #718096;
+                }
+                
+                .modal-close:hover {
+                    color: #2d3748;
+                }
+                
+                .modal-body {
+                    padding: 1.5rem;
+                    max-height: 70vh;
+                    overflow-y: auto;
+                }
+                
+                .audit-overview {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 1rem;
+                    margin-bottom: 2rem;
+                }
+                
+                .overview-item {
+                    background: #f7fafc;
+                    padding: 1rem;
+                    border-radius: 0.5rem;
+                }
+                
+                .overview-label {
+                    font-size: 0.875rem;
+                    color: #718096;
+                    margin-bottom: 0.5rem;
+                }
+                
+                .overview-value {
+                    font-weight: 600;
+                    color: #2d3748;
+                }
+                
+                .compliance-summary {
+                    margin-bottom: 2rem;
+                }
+                
+                .stats-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                    gap: 1rem;
+                    margin-top: 1rem;
+                }
+                
+                .stat-card {
+                    text-align: center;
+                    padding: 1.5rem;
+                    border-radius: 0.5rem;
+                }
+                
+                .stat-count {
+                    font-size: 2rem;
+                    font-weight: bold;
+                    margin-bottom: 0.5rem;
+                }
+                
+                .stat-label {
+                    font-size: 0.875rem;
+                }
+                
+                .audit-items {
+                    margin-bottom: 2rem;
+                }
+                
+                .items-table {
+                    overflow-x: auto;
+                    margin-top: 1rem;
+                }
+                
+                .items-table table {
+                    width: 100%;
+                    border-collapse: collapse;
+                }
+                
+                .items-table th {
+                    background: #f7fafc;
+                    padding: 1rem;
+                    text-align: left;
+                    font-weight: 600;
+                    color: #4a5568;
+                    border-bottom: 2px solid #e2e8f0;
+                }
+                
+                .items-table td {
+                    padding: 1rem;
+                    border-bottom: 1px solid #e2e8f0;
+                    vertical-align: top;
+                }
+                
+                .compliance-badge {
+                    display: inline-block;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.25rem;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                }
+                
+                .badge-compliant {
+                    background: #c6f6d5;
+                    color: #22543d;
+                }
+                
+                .badge-partial {
+                    background: #feebc8;
+                    color: #744210;
+                }
+                
+                .badge-noncompliant {
+                    background: #fed7d7;
+                    color: #742a2a;
+                }
+                
+                .improvement-suggestions ul {
+                    margin: 0;
+                    padding-left: 1.5rem;
+                }
+                
+                .improvement-suggestions li {
+                    margin-bottom: 0.5rem;
+                    color: #4a5568;
+                }
+                
+                .modal-footer {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 1rem;
+                    padding: 1.5rem;
+                    border-top: 1px solid #e2e8f0;
+                }
+            `;
+            
+            document.head.appendChild(style);
+        }
+        
+        // ========== 显示状态消息 ==========
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            
+            if (type === 'error') {
+                statusDiv.innerHTML = `<div class="status-error">❌ ${message}</div>`;
+            } else if (type === 'success') {
+                statusDiv.innerHTML = `<div class="status-success">✅ ${message}</div>`;
+            } else {
+                statusDiv.innerHTML = `<div class="status-info">ℹ️ ${message}</div>`;
+            }
+            
+            // 3秒后自动清除成功/信息消息
+            if (type !== 'error') {
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+        
+        // ========== 模拟数据函数 ==========
+        function useMockData() {
+            console.log('使用模拟SOP数据');
+            
+            currentSopData = {
+                id: currentSopId,
+                name: 'AA-PFA3P-14.2-AQ-001 维修工岗位安全操作规程',
+                version: 'v1.0',
+                department: '安全部',
+                category: 'operation',
+                compliance_status: 'pending',
+                audit_score: 85.5,
+                file_name: 'AA-PFA3P-14.2-AQ-001 维修工岗位安全操作规程.pdf',
+                file_size: 10240,
+                content: '1. 作业前准备\n   1.1 检查个人防护用品\n   1.2 检查作业环境\n   1.3 检查工具设备\n\n2. 作业过程\n   2.1 按照操作规程执行\n   2.2 注意安全事项\n   2.3 及时报告异常\n\n3. 作业后\n   3.1 清理作业现场\n   3.2 归还工具设备\n   3.3 填写作业记录',
+                created_at: '2026-03-17T04:57:28',
+                updated_at: '2026-03-17T04:57:28'
+            };
+            
+            displaySOPData();
+            showMockStandards();
+            showMockAudits();
+            
+            showStatus('使用模拟数据加载完成', 'success');
+        }
+        
+        function showMockStandards() {
+            const container = document.getElementById('standardsList');
+            const emptyMessage = document.getElementById('noStandardsMessage');
+            
+            const mockStandards = [
+                {
+                    id: 'GB-5083-2023',
+                    name: '生产设备安全卫生设计总则',
+                    standard_no: 'GB 5083-2023',
+                    category: 'safety',
+                    effective_date: '2023-12-01',
+                    relevance_score: 85,
+                    mapping_id: 1
+                },
+                {
+                    id: 'GB-T-2893.1-2013',
+                    name: '安全色和安全标志',
+                    standard_no: 'GB/T 2893.1-2013',
+                    category: 'safety',
+                    effective_date: '2013-12-01',
+                    relevance_score: 70,
+                    mapping_id: 2
+                }
+            ];
+            
+            displayStandards(mockStandards);
+            container.style.display = 'block';
+            emptyMessage.style.display = 'none';
+        }
+        
+        function showMockAudits() {
+            const container = document.getElementById('auditRecords');
+            const emptyMessage = document.getElementById('noAuditsMessage');
+            
+            // 安全检查
+            if (!container || !emptyMessage) {
+                console.error('审核记录容器元素未找到，请确保"审核记录"标签页已激活');
+                return;
+            }
+            
+            const mockAudits = [
+                {
+                    id: 'AUDIT-20260317-001',
+                    audit_date: '2026-03-17',
+                    auditor: 'AI审核系统',
+                    overall_score: 85.5,
+                    status: 'completed',
+                    created_at: '2026-03-17T14:30:00'
+                },
+                {
+                    id: 'AUDIT-20260316-001',
+                    audit_date: '2026-03-16',
+                    auditor: '张三',
+                    overall_score: 78.0,
+                    status: 'completed',
+                    created_at: '2026-03-16T10:15:00'
+                }
+            ];
+            
+            displayAudits(mockAudits);
+            container.style.display = 'block';
+            emptyMessage.style.display = 'none';
+        }
+        
+        // ========== 检查AI审核记录 ==========
+        async function checkAIAuditHistory() {
+            try {
+                console.log('检查AI审核记录，当前SOP ID:', currentSopId);
+                
+                // 首先检查是否有正在进行的审核任务
+                const hasActiveAudit = await checkActiveAuditTasks();
+                if (hasActiveAudit) {
+                    console.log('有正在进行的审核任务，显示进度界面');
+                    return; // 已经有进度显示了，不需要做其他操作
+                }
+                
+                // 尝试获取最新的AI审核记录
+                const apiUrl = `http://localhost:8002/api/ai-audit/history?sop_id=${currentSopId}&limit=1`;
+                console.log('查询审核历史API:', apiUrl);
+                
+                const response = await fetch(apiUrl, { signal: AbortSignal.timeout(5000) });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const audits = result.data || result || [];
+                    
+                    console.log('审核记录数量:', audits.length);
+                    
+                    if (audits.length > 0) {
+                        // 有审核记录，显示结果
+                        const latestAudit = audits[0];
+                        console.log('显示最新审核结果');
+                        showAuditResults(latestAudit);
+                    } else {
+                        // 无审核记录，显示默认界面
+                        console.log('无审核记录，显示默认界面');
+                        showNoAuditInterface();
+                    }
+                } else {
+                    // API不可用，显示默认界面
+                    console.log('API不可用，显示默认界面');
+                    showNoAuditInterface();
+                }
+            } catch (error) {
+                console.error('检查AI审核记录失败:', error);
+                // 检查是否有正在进行的审核任务
+                const hasActiveAudit = await checkActiveAuditTasks();
+                if (!hasActiveAudit) {
+                    showNoAuditInterface();
+                }
+            }
+        }
+        
+        // 检查是否有正在进行的审核任务
+        async function checkActiveAuditTasks() {
+            try {
+                // 检查是否有正在进行的审核任务（通过localStorage）
+                const activeTasks = JSON.parse(localStorage.getItem('activeAuditTasks') || '{}');
+                const currentTask = activeTasks[currentSopId];
+                
+                if (currentTask && currentTask.taskId) {
+                    const taskId = currentTask.taskId;
+                    console.log('发现正在进行的审核任务:', taskId);
+                    
+                    // 检查任务状态
+                    const statusUrl = `http://localhost:8002/api/ai-audit/status/${taskId}`;
+                    const response = await fetch(statusUrl, { signal: AbortSignal.timeout(3000) });
+                    
+                    if (response.ok) {
+                        const taskStatus = await response.json();
+                        
+                        if (taskStatus.status === 'running' || taskStatus.status === 'pending') {
+                            console.log('任务仍在进行中，显示进度条');
+                            // 显示进度界面
+                            showAuditInterface();
+                            // 开始轮询进度
+                            pollAuditProgress(taskId);
+                            return true;
+                        } else if (taskStatus.status === 'completed') {
+                            // 任务已完成，清除本地存储
+                            delete activeTasks[currentSopId];
+                            localStorage.setItem('activeAuditTasks', JSON.stringify(activeTasks));
+                            return false;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log('检查活动任务失败:', error);
+            }
+            
+            return false;
+        }
+        
+        // 显示无审核记录界面
+        function showNoAuditInterface() {
+            document.getElementById('noAuditSection').style.display = 'block';
+            document.getElementById('auditStatusSection').style.display = 'none';
+            document.getElementById('auditProgressSection').style.display = 'none';
+            document.getElementById('auditResultsSection').style.display = 'none';
+        }
+        
+        // ========== 工具函数 ==========
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function viewStandard(standardId) {
+            alert(`查看标准 ${standardId} 功能正在开发中...`);
+        }
+    </script>
+</body>
+</html>
