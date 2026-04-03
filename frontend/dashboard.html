@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仪表板 - 安全智能审核系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
+    <script src="dashboard.js"></script>
+    <style>
+        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); border: 1px solid #e0e0e0; transition: all 0.3s; position: relative; overflow: hidden; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.15); }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #667eea, #764ba2); }
+        .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .stat-title { font-size: 1rem; color: #666; font-weight: 600; }
+        .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: white; }
+        .icon-blue { background: #667eea; } .icon-green { background: #10b981; } .icon-purple { background: #8b5cf6; } .icon-orange { background: #f59e0b; }
+        .stat-value { font-size: 2.5rem; font-weight: 700; color: #333; margin-bottom: 5px; }
+        .stat-change { font-size: 0.9rem; color: #666; display: flex; align-items: center; gap: 5px; }
+        .change-up { color: #10b981; } .change-down { color: #ef4444; }
+        .dashboard-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .chart-container { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); border: 1px solid #e0e0e0; }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .chart-title { font-size: 1.2rem; font-weight: 600; color: #333; }
+        .chart-wrapper { position: relative; height: 300px; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .loading i { font-size: 2rem; margin-bottom: 10px; color: #667eea; }
+        .error-message { color: #e74c3c; text-align: center; padding: 20px; background: #f8d7da; border-radius: 5px; margin: 20px 0; }
+        .dashboard-filters { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .filter-group { display: flex; align-items: center; gap: 8px; }
+        .filter-label { font-weight: 600; color: #555; }
+        .filter-select { padding: 6px 12px; border: 1px solid #ddd; border-radius: 5px; background: white; }
+        @media (max-width: 768px) {
+            .dashboard-charts { grid-template-columns: 1fr; }
+            .chart-wrapper { height: 250px; }
+            .dashboard-filters { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="logo">SAS</div>
+                <h1>安全智能审核系统</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="sops.html">SOP管理</a></li>
+                <li><a href="standards.html">标准库管理</a></li>
+                <li><a href="dashboard.html" class="active">仪表板</a></li>
+                <li><a href="reports.html">报告中心</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card fade-in">
+            <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-chart-line"></i> 系统仪表板</h2>
+                <p class="card-subtitle">实时监控系统运行状态和关键指标</p>
+            </div>
+        </div>
+        
+        <div class="dashboard-filters">
+            <div class="filter-group">
+                <label for="timeRange"><i class="fas fa-calendar-alt"></i> 时间范围:</label>
+                <select id="timeRange" class="filter-select">
+                    <option value="week">最近一周</option>
+                    <option value="month" selected>最近一月</option>
+                    <option value="quarter">最近一季度</option>
+                    <option value="year">最近一年</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="departmentFilter"><i class="fas fa-building"></i> 部门:</label>
+                <select id="departmentFilter" class="filter-select">
+                    <option value="all">所有部门</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="levelFilter"><i class="fas fa-layer-group"></i> 级别:</label>
+                <select id="levelFilter" class="filter-select">
+                    <option value="all">所有级别</option>
+                    <option value="一级">一级</option>
+                    <option value="二级">二级</option>
+                    <option value="三级">三级</option>
+                </select>
+            </div>
+            
+            <div class="action-buttons" style="margin-left: auto;">
+                <button id="refreshBtn" class="btn btn-primary"><i class="fas fa-sync-alt"></i> 刷新数据</button>
+                <button id="exportBtn" class="btn btn-success"><i class="fas fa-download"></i> 导出数据</button>
+            </div>
+        </div>
+        
+        <div id="errorMessage" class="error-message" style="display: none;">图表库加载失败，请刷新页面重试。</div>
+        
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">SOP总数</div>
+                    <div class="stat-icon icon-blue"><i class="fas fa-file-alt"></i></div>
+                </div>
+                <div class="stat-value" id="sopTotal">0</div>
+                <div class="stat-change"><span id="sopChange" class="change-up">+0 本月新增</span></div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">待审核SOP</div>
+                    <div class="stat-icon icon-orange"><i class="fas fa-clock"></i></div>
+                </div>
+                <div class="stat-value" id="sopPending">0</div>
+                <div class="stat-change"><span id="sopPendingPercent">0%</span> 的SOP待审核</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">已审核SOP</div>
+                    <div class="stat-icon icon-green"><i class="fas fa-check-circle"></i></div>
+                </div>
+                <div class="stat-value" id="sopReviewed">0</div>
+                <div class="stat-change">审核通过率: <span id="sopPassRate">0%</span></div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">技术标准总数</div>
+                    <div class="stat-icon icon-purple"><i class="fas fa-book"></i></div>
+                </div>
+                <div class="stat-value" id="standardTotal">0</div>
+                <div class="stat-change"><span id="standardChange" class="change-up">+0 本月新增</span></div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">待更新标准</div>
+                    <div class="stat-icon icon-orange"><i class="fas fa-exclamation-triangle"></i></div>
+                </div>
+                <div class="stat-value" id="standardPendingUpdate">0</div>
+                <div class="stat-change">即将过期: <span id="standardExpiredSoon">0</span> 个</div>
+            </div>
+        </div>
+        
+        <div class="dashboard-charts">
+            <div class="chart-container">
+                <div class="chart-header"><div class="chart-title">SOP部门分布</div></div>
+                <div class="chart-wrapper"><canvas id="sopDepartmentChart"></canvas></div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-header"><div class="chart-title">SOP级别分布</div></div>
+                <div class="chart-wrapper"><canvas id="sopLevelChart"></canvas></div>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading"><i class="fas fa-spinner fa-spin"></i><br>正在加载仪表板数据...</div>
+    </div>
+    
+    <script>
+        window.dashboardAutoInitDisabled = true;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('仪表板页面加载完成');
+            
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js未加载！');
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+            
+            console.log('Chart.js已加载');
+            
+            if (!window.dashboard) {
+                window.dashboard = new DashboardManager();
+            }
+            
+            try {
+                window.dashboard.init();
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('仪表板初始化失败:', error);
+                document.getElementById('errorMessage').innerHTML = '仪表板初始化失败: ' + error.message;
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+            
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                window.dashboard.loadDashboardData();
+            });
+            
+            document.getElementById('exportBtn').addEventListener('click', () => {
+                window.dashboard.exportDashboardData();
+            });
+            
+            document.getElementById('timeRange').addEventListener('change', () => {
+                window.dashboard.currentFilters.timeRange = document.getElementById('timeRange').value;
+                window.dashboard.loadDashboardData();
+            });
+            
+            document.getElementById('departmentFilter').addEventListener('change', () => {
+                window.dashboard.currentFilters.department = document.getElementById('departmentFilter').value;
+                window.dashboard.loadDashboardData();
+            });
+            
+            document.getElementById('levelFilter').addEventListener('change', () => {
+                window.dashboard.currentFilters.level = document.getElementById('levelFilter').value;
+                window.dashboard.loadDashboardData();
+            });
+        });
+    </script>
+</body>
+</html>

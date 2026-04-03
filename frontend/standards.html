@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>标准库管理 - 安全智能审核系统</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="config.js"></script>
+    <script src="category-utils.js"></script>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="logo">SAS</div>
+                <h1>安全智能审核系统</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="sops.html">SOP管理</a></li>
+                <li><a href="standards.html" class="active">标准库管理</a></li>
+                <li><a href="dashboard.html">仪表板</a></li>
+                <li><a href="reports.html">报告中心</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 搜索和操作区域 -->
+        <div class="card fade-in">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-book"></i> 标准库管理
+                </h2>
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜索标准编号、名称或分类..." 
+                           onkeyup="if(event.key === 'Enter') searchStandards()">
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div>
+                        <button class="btn btn-primary" onclick="showAddModal()">
+                            <i class="fas fa-plus"></i> 添加新标准
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadStandards()">
+                            <i class="fas fa-sync-alt"></i> 刷新
+                        </button>
+                    </div>
+                    <div id="stats" style="color: #4a5568; font-weight: 600;">
+                        加载中...
+                    </div>
+                </div>
+
+                <!-- 标准表格 -->
+                <div class="table-container">
+                    <table class="table" id="standardsTable">
+                        <thead>
+                            <tr>
+                                <th>标准编号</th>
+                                <th>标准名称</th>
+                                <th>分类</th>
+                                <th>生效日期</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="standardsTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 3rem;">
+                                    <div class="loading">
+                                        <div class="loading-spinner"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑标准模态框 -->
+    <div class="modal" id="standardModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">添加新标准</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="standardForm" onsubmit="saveStandard(event)">
+                <input type="hidden" id="standardId">
+                <!-- 文件上传区域 -->
+                <div class="form-group">
+                    <label class="form-label">上传标准文件（可选）</label>
+                    <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                        <p>点击或拖拽文件到此区域</p>
+                        <p class="file-hint">支持 PDF, DOC, DOCX 格式，最大10MB</p>
+                        <input type="file" id="fileInput" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleFileSelect(event)">
+                    </div>
+                    <div id="fileName" class="file-name-display"></div>
+                </div>
+                
+                <!-- 自动填充的信息 -->
+                <div class="form-group">
+                    <label class="form-label">标准名称 *</label>
+                    <input type="text" id="name" class="form-control" required>
+                    <small class="form-text">从文件名自动提取，可手动修改</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">标准编号 *</label>
+                    <input type="text" id="standard_no" class="form-control" required>
+                    <small class="form-text">标准编号（如 GB/T 12345-2023），可从文件名自动提取，建议手动核对</small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">分类 *</label>
+                    <select id="category" class="form-control" required>
+                        <option value="">正在加载分类...</option>
+                    </select>
+                    <small class="form-text">
+                        动态加载分类列表，如需管理分类请点击
+                        <a href="categories.html" style="color: #4299e1; text-decoration: underline; cursor: pointer;">
+                            管理分类
+                        </a>
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">生效日期（可选）</label>
+                    <input type="date" id="effective_date" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">备注（可选）</label>
+                    <textarea id="description" class="form-control" rows="2" placeholder="可填写标准说明或备注"></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;" id="saveButton">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="closeModal()">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentStandardId = null;
+        let selectedFile = null;
+
+        // 页面加载时加载标准
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStandards();
+            
+            // 设置默认日期为今天
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('effective_date').value = today;
+            
+            // 初始化文件拖拽
+            initFileDragDrop();
+        });
+
+        // 初始化文件拖拽功能
+        function initFileDragDrop() {
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            
+            fileUploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                fileUploadArea.classList.add('dragover');
+            });
+            
+            fileUploadArea.addEventListener('dragleave', function() {
+                fileUploadArea.classList.remove('dragover');
+            });
+            
+            fileUploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                fileUploadArea.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    handleFileSelect({ target: { files: e.dataTransfer.files } });
+                }
+            });
+        }
+
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // 检查文件大小（10MB限制）
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('文件大小不能超过10MB');
+                    return;
+                }
+                
+                // 检查文件类型
+                const allowedTypes = ['application/pdf', 'application/msword', 
+                                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('只支持 PDF, DOC, DOCX 格式的文件');
+                    return;
+                }
+                
+                selectedFile = file;
+                document.getElementById('fileName').textContent = `已选择文件: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                
+                // 自动从文件名提取信息（标准库版本）
+                autoFillStandardFromFileName(file.name);
+            }
+        }
+        // 从文件名自动填充标准信息
+        function autoFillStandardFromFileName(fileName) {
+            // 移除扩展名
+            let baseName = fileName.replace(/\.[^/.]+$/, "");
+            
+            // 尝试提取标准编号（如 GB/T 12345-2023）
+            let standardNo = '';
+            let standardName = baseName;
+            
+            // 常见标准编号模式
+            const standardPatterns = [
+                /(GB[\/]T?\s*\d+-\d+)/i,      // GB/T 12345-2023
+                /(JB[\/]T?\s*\d+-\d+)/i,      // JB/T 标准
+                /(HG[\/]T?\s*\d+-\d+)/i,      // HG/T 标准
+                /(ISO\s*\d+:\d+)/i,           // ISO 标准
+                /(IEC\s*\d+-\d+)/i,           // IEC 标准
+                /(ASTM\s*[A-Z]\d+)/i,          // ASTM 标准
+                /([A-Z]{2,3}\s*\d+\.\d+)/i,  // 其他标准
+            ];
+            
+            for (const pattern of standardPatterns) {
+                const match = baseName.match(pattern);
+                if (match) {
+                    standardNo = match[1];
+                    // 保留完整的文件名作为标准名称，不移除编号部分
+                    standardName = baseName;
+                    break;
+                }
+            }
+            
+            // 如果没有匹配到标准编号
+            if (!standardNo) {
+                // 尝试提取其他格式
+                const simplePattern = /([A-Z]{2,3}[\s-]?\d+)/;
+                const simpleMatch = baseName.match(simplePattern);
+                if (simpleMatch) {
+                    standardNo = simpleMatch[1];
+                    standardName = baseName; // 保留完整文件名
+                } else {
+                    // 使用文件名前30个字符作为编号
+                    standardNo = baseName.substring(0, 30);
+                    standardName = baseName; // 保留完整文件名
+                }
+            }
+            
+            // 如果名称为空
+            if (!standardName) {
+                standardName = '未命名标准';
+            }
+            
+            // 填充表单
+            document.getElementById('standard_no').value = standardNo;
+            document.getElementById('name').value = standardName;
+            
+            // 根据文件名自动识别分类
+            const detectedCategory = detectCategoryFromFileName(fileName);
+            
+            if (detectedCategory) {
+                document.getElementById('category').value = detectedCategory;
+            }
+            
+            // 尝试从文件名提取年份作为生效日期（只提取合理的年份：1900-2100）
+            const yearMatch = baseName.match(/(19\d{2}|20\d{2})/);
+            if (yearMatch) {
+                const year = yearMatch[0];
+                // 检查年份是否合理
+                const yearNum = parseInt(year);
+                if (yearNum >= 1900 && yearNum <= 2100) {
+                    document.getElementById('effective_date').value = `${year}-01-01`;
+                }
+            }
+        }
+
+        // 加载标准列表
+        async function loadStandards() {
+            const tableBody = document.getElementById('standardsTableBody');
+            const statsElement = document.getElementById('stats');
+            
+            // 显示加载状态
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 3rem;">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                // 使用API配置获取URL
+                const apiUrl = window.API.getApiUrl('/standards');
+                console.log('正在加载标准数据，API URL:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API返回数据:', data);
+                
+                // 处理不同的数据格式
+                let standards;
+                if (Array.isArray(data)) {
+                    standards = data;
+                } else if (data.status === 'success' && Array.isArray(data.data)) {
+                    standards = data.data;
+                } else if (data.standards && Array.isArray(data.standards)) {
+                    standards = data.standards;
+                } else {
+                    throw new Error('API返回格式错误');
+                }
+                
+                // 更新统计信息
+                statsElement.textContent = `共 ${standards.length} 条记录`;
+                
+                // 清空表格
+                tableBody.innerHTML = '';
+                
+                if (standards.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem; color: #999;">
+                                <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                                <p>暂无标准记录</p>
+                                <button class="btn btn-primary" onclick="showAddModal()">添加第一个标准</button>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                // 填充表格
+                standards.forEach(standard => {
+                    const row = document.createElement('tr');
+                    
+                    // 格式化生效日期
+                    const effectiveDate = standard.effective_date || '未设置';
+                    const formattedDate = effectiveDate !== '未设置' ? new Date(effectiveDate).toLocaleDateString('zh-CN') : '未设置';
+                    
+                    // 格式化创建时间
+                    const createdAt = standard.created_at || standard.updated_at || '未知';
+                    const formattedTime = createdAt !== '未知' ? new Date(createdAt).toLocaleDateString('zh-CN') : '未知';
+                    
+                    row.innerHTML = `
+                        <td>${standard.standard_no || standard.code || standard.id || 'N/A'}</td>
+                        <td>${standard.name || '未命名'}</td>
+                        <td>${standard.category || standard.type || '未分类'}</td>
+                        <td>${formattedDate}</td>
+                        <td>${formattedTime}</td>
+                        <td>
+                            <button class="btn-action" onclick="viewStandard('${standard.id}')" title="查看">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-action" onclick="editStandard('${standard.id}')" title="编辑">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action" onclick="deleteStandard('${standard.id}')" title="删除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+            } catch (error) {
+                console.error('加载标准失败:', error);
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: #f5222d;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <h3>加载失败</h3>
+                            <p>${error.message}</p>
+                            <button class="btn btn-secondary" onclick="loadStandards()">重试</button>
+                        </td>
+                    </tr>
+                `;
+                statsElement.textContent = '加载失败';
+            }
+        }
+
+        // 搜索标准
+        async function searchStandards() {
+            const searchInput = document.getElementById('searchInput');
+            const query = searchInput.value.trim();
+            
+            if (!query) {
+                loadStandards();
+                return;
+            }
+            
+            const tableBody = document.getElementById('standardsTableBody');
+            const statsElement = document.getElementById('stats');
+            
+            // 显示加载状态
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 3rem;">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                const apiUrl = window.API.getApiUrl(`/standards/search?q=${encodeURIComponent(query)}`);
+                console.log('搜索标准，API URL:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('搜索返回数据:', data);
+                
+                // 处理搜索结果
+                let standards;
+                if (Array.isArray(data)) {
+                    standards = data;
+                } else if (data.status === 'success' && Array.isArray(data.data)) {
+                    standards = data.data;
+                } else {
+                    throw new Error('搜索返回格式错误');
+                }
+                
+                statsElement.textContent = `找到 ${standards.length} 条结果`;
+                
+                // 清空表格
+                tableBody.innerHTML = '';
+                
+                if (standards.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem; color: #999;">
+                                <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                                <p>未找到匹配的标准</p>
+                                <button class="btn btn-primary" onclick="loadStandards()">返回全部</button>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                // 填充搜索结果
+                standards.forEach(standard => {
+                    const row = document.createElement('tr');
+                    
+                    // 格式化生效日期
+                    const effectiveDate = standard.effective_date || '未设置';
+                    const formattedDate = effectiveDate !== '未设置' ? new Date(effectiveDate).toLocaleDateString('zh-CN') : '未设置';
+                    
+                    // 格式化创建时间
+                    const createdAt = standard.created_at || standard.updated_at || '未知';
+                    const formattedTime = createdAt !== '未知' ? new Date(createdAt).toLocaleDateString('zh-CN') : '未知';
+                    
+                    row.innerHTML = `
+                        <td>${standard.standard_no || standard.code || standard.id || 'N/A'}</td>
+                        <td>${standard.name || '未命名'}</td>
+                        <td>${standard.category || standard.type || '未分类'}</td>
+                        <td>${formattedDate}</td>
+                        <td>${formattedTime}</td>
+                        <td>
+                            <button class="btn-action" onclick="viewStandard('${standard.id}')" title="查看">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-action" onclick="editStandard('${standard.id}')" title="编辑">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action" onclick="deleteStandard('${standard.id}')" title="删除">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+            } catch (error) {
+                console.error('搜索标准失败:', error);
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: #f5222d;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <h3>搜索失败</h3>
+                            <p>${error.message}</p>
+                            <button class="btn btn-secondary" onclick="loadStandards()">返回全部</button>
+                        </td>
+                    </tr>
+                `;
+                statsElement.textContent = '搜索失败';
+            }
+        }
+
+        // 显示添加模态框
+        async function showAddModal() {
+            currentStandardId = null;
+            
+            const modalTitle = document.getElementById('modalTitle');
+            const saveButton = document.getElementById('saveButton');
+            const standardForm = document.getElementById('standardForm');
+            const standardIdInput = document.getElementById('standardId');
+            const fileNameElement = document.getElementById('fileName');
+            
+            if (modalTitle) modalTitle.textContent = '添加新标准';
+            if (saveButton) saveButton.textContent = '保存';
+            if (standardForm) standardForm.reset();
+            if (standardIdInput) standardIdInput.value = '';
+            if (fileNameElement) fileNameElement.textContent = '';
+            
+            selectedFile = null;
+            
+            // 设置默认日期为今天
+            const today = new Date().toISOString().split('T')[0];
+            const effectiveDateInput = document.getElementById('effective_date');
+            if (effectiveDateInput) effectiveDateInput.value = today;
+            
+            // 动态加载分类
+            await populateCategorySelect('category', '', true);
+            
+            const standardModal = document.getElementById('standardModal');
+            if (standardModal) standardModal.style.display = 'flex';
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            const standardModal = document.getElementById('standardModal');
+            if (standardModal) standardModal.style.display = 'none';
+            currentStandardId = null;
+            selectedFile = null;
+        }
+
+        // 保存标准（支持创建和编辑）
+        async function saveStandard(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('name').value.trim();
+            const standardNo = document.getElementById('standard_no').value.trim();
+            const category = document.getElementById('category').value;
+            
+            if (!name || !standardNo || !category) {
+                alert('请填写必填字段：标准名称、标准编号和分类');
+                return;
+            }
+            
+            const formData = new FormData();
+            
+            // 添加文件（如果选择了文件）
+            if (selectedFile) {
+                formData.append('file', selectedFile);
+            }
+            
+            // 添加标准数据
+            formData.append('name', name);
+            formData.append('standard_no', standardNo);
+            formData.append('category', category);
+            
+            // 添加描述（如果提供了）
+            const description = document.getElementById('description').value.trim();
+            if (description) {
+                formData.append('description', description);
+            }
+            
+            // 添加生效日期（如果设置了）
+            const effectiveDate = document.getElementById('effective_date').value;
+            if (effectiveDate) {
+                formData.append('effective_date', effectiveDate);
+            }
+            
+            try {
+                let apiUrl, method;
+                
+                if (currentStandardId) {
+                    // 编辑模式
+                    apiUrl = window.API.getApiUrl(`/standards/${currentStandardId}`);
+                    method = 'PUT';
+                } else {
+                    // 创建模式
+                    apiUrl = window.API.getApiUrl('/standards');
+                    method = 'POST';
+                }
+                
+                console.log(`${currentStandardId ? '编辑' : '创建'}标准，URL:`, apiUrl);
+                const response = await fetch(apiUrl, {
+                    method: method,
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`保存失败: ${response.status} - ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('保存成功:', result);
+                
+                alert(currentStandardId ? '标准更新成功！' : '标准保存成功！');
+                closeModal();
+                loadStandards();
+                
+            } catch (error) {
+                console.error('保存标准失败:', error);
+                alert(`保存失败: ${error.message}`);
+            }
+        }
+
+        // 查看标准
+        function viewStandard(id) {
+            // 跳转到标准详情页面（最终版本，样式美化，移除文本提取标签页）
+            window.open('standard-detail-clean.html?id=' + id, '_blank');
+        }
+
+        // 编辑标准
+        async function editStandard(id) {
+            try {
+                console.log('正在获取标准数据，ID:', id);
+                const apiUrl = window.API.getApiUrl(`/standards/${id}`);
+                console.log('API URL:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                const result = await response.json();
+                
+                console.log('API返回结果:', result);
+                
+                // 处理两种API响应格式：
+                // 1. 新格式: {status: "success", message: "...", data: {...}}
+                // 2. 旧格式: 直接返回标准数据对象
+                let standardData;
+                
+                if (result.status === 'success' && result.data) {
+                    // 新格式
+                    standardData = result.data;
+                } else if (result.id) {
+                    // 旧格式：直接返回标准对象
+                    standardData = result;
+                } else {
+                    console.error('API返回格式错误:', result);
+                    throw new Error(result.message || '获取标准数据失败：API返回格式错误');
+                }
+                
+                currentStandardId = id;
+                
+                // 填充表单 - 添加元素存在性检查
+                const modalTitle = document.getElementById('modalTitle');
+                const saveButton = document.getElementById('saveButton');
+                const standardIdInput = document.getElementById('standardId');
+                const nameInput = document.getElementById('name');
+                const standardNoInput = document.getElementById('standard_no');
+                const categorySelect = document.getElementById('category');
+                const effectiveDateInput = document.getElementById('effective_date');
+                const descriptionInput = document.getElementById('description');
+                
+                if (!modalTitle || !saveButton || !standardIdInput || !nameInput || !standardNoInput || !categorySelect) {
+                    throw new Error('表单元素未找到，请刷新页面重试');
+                }
+                
+                modalTitle.textContent = '编辑标准';
+                saveButton.textContent = '更新';
+                
+                standardIdInput.value = standardData.id;
+                nameInput.value = standardData.name;
+                standardNoInput.value = standardData.standard_no;
+                categorySelect.value = standardData.category;
+                if (effectiveDateInput) effectiveDateInput.value = standardData.effective_date || '';
+                if (descriptionInput) descriptionInput.value = standardData.description || '';
+                
+                // 显示当前文件名
+                const fileNameElement = document.getElementById('fileName');
+                if (fileNameElement) {
+                    if (standardData.file_path) {
+                        const fileName = standardData.file_path.split('/').pop() || standardData.file_path.split('\\').pop();
+                        fileNameElement.textContent = `当前文件: ${fileName}`;
+                    } else {
+                        fileNameElement.textContent = '未上传文件';
+                    }
+                }
+                
+                selectedFile = null; // 编辑时不重新上传文件，除非用户选择新文件
+                
+                // 动态加载分类并设置选中值
+                await populateCategorySelect('category', standardData.category, true);
+                
+                // 显示模态框
+                const standardModal = document.getElementById('standardModal');
+                if (standardModal) {
+                    standardModal.style.display = 'flex';
+                } else {
+                    console.warn('标准模态框元素未找到');
+                }
+                
+                console.log('表单填充完成');
+                
+            } catch (error) {
+                console.error('获取标准数据失败:', error);
+                alert('获取标准信息失败: ' + error.message);
+            }
+        }
+
+        // 删除标准
+        async function deleteStandard(id) {
+            if (!confirm('确定要删除这个标准吗？此操作不可撤销。')) {
+                return;
+            }
+            
+            try {
+                const apiUrl = window.API.getApiUrl(`/standards/${id}`);
+                const response = await fetch(apiUrl, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`删除失败: ${response.status}`);
+                }
+                
+                alert('标准删除成功！');
+                loadStandards();
+                
+            } catch (error) {
+                console.error('删除标准失败:', error);
+                alert(`删除失败: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

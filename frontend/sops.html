@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="config.js"></script>
+    <script src="department-utils.js"></script>
 </head>
 <body>
     <!-- 导航栏 -->
@@ -139,6 +140,20 @@
                 </div>
                 
                 <div class="form-group">
+                    <label class="form-label">所属部门</label>
+                    <select id="department" class="form-control" required>
+                        <option value="">请选择部门...</option>
+                        <!-- 部门选项将通过JavaScript动态加载 -->
+                    </select>
+                    <small class="form-text">选择SOP所属部门</small>
+                    <div style="margin-top: 5px;">
+                        <a href="departments.html" target="_blank" style="font-size: 12px; color: #4299e1;">
+                            <i class="fas fa-cog"></i> 管理部门分类
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="form-group">
                     <label class="form-label">备注（可选）</label>
                     <textarea id="description" class="form-control" rows="2" placeholder="可填写特殊说明或备注"></textarea>
                 </div>
@@ -160,7 +175,12 @@
         let selectedFile = null;
 
         // 页面加载时加载SOP
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 初始化部门功能
+            if (window.departmentUtils && window.departmentUtils.initDepartmentFeatures) {
+                await window.departmentUtils.initDepartmentFeatures('department');
+            }
+            
             loadSOPs();
             initFileDragDrop();
         });
@@ -256,6 +276,10 @@
             }
             
             document.getElementById('category').value = category;
+            
+            // 根据文件名关键词自动选择部门
+            const detectedDepartment = window.departmentUtils?.detectDepartmentFromFileName(fileName) || '';
+            document.getElementById('department').value = detectedDepartment;
         }
 
         // 显示SOP列表
@@ -492,7 +516,7 @@
         }
 
         // 显示添加模态框
-        function showAddModal() {
+        async function showAddModal() {
             currentSOPId = null;
             document.getElementById('modalTitle').textContent = '添加新SOP';
             document.getElementById('sopForm').reset();
@@ -500,46 +524,103 @@
             selectedFile = null;
             document.getElementById('version').value = 'v1.0';
             document.getElementById('category').value = 'general';
+            
+            // 动态加载部门列表
+            if (window.departmentUtils && window.departmentUtils.populateDepartmentSelect) {
+                await window.departmentUtils.populateDepartmentSelect('department', '');
+            }
+            
             document.getElementById('sopModal').style.display = 'flex';
         }
 
         // 关闭模态框
         function closeModal() {
             document.getElementById('sopModal').style.display = 'none';
+            // 重置状态
+            currentSOPId = null;
+            selectedFile = null;
         }
 
-        // 保存SOP
+        // 保存SOP（支持创建和编辑）
         async function saveSOP(event) {
             event.preventDefault();
             
-            if (!selectedFile) {
+            // 如果是创建新SOP，需要文件
+            if (!currentSOPId && !selectedFile) {
                 alert('请先选择SOP文件');
                 return;
             }
             
             const formData = new FormData();
-            formData.append('file', selectedFile);
+            
+            // 首先添加文本字段（确保在文件之前）
             formData.append('name', document.getElementById('name').value);
             formData.append('version', document.getElementById('version').value);
             formData.append('category', document.getElementById('category').value);
+            formData.append('department', document.getElementById('department').value);
+            
+            // 然后添加文件（如果有）
+            if (!currentSOPId && selectedFile) {
+                formData.append('file', selectedFile);
+            }
             // 注意：后端不需要 sop_no 和 description 字段
             
+            // 调试：打印FormData内容
+            console.log('提交的FormData内容:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+            console.log('选择的部门:', document.getElementById('department').value);
+            console.log('当前模式:', currentSOPId ? '编辑' : '创建');
+            
             try {
-                const apiUrl = window.API.getApiUrl('/sops');
+                let apiUrl, method;
+                
+                if (currentSOPId) {
+                    // 编辑模式：使用PUT请求
+                    apiUrl = window.API.getApiUrl(`/sops/${currentSOPId}`);
+                    method = 'PUT';
+                    console.log('编辑SOP，API URL:', apiUrl);
+                } else {
+                    // 创建模式：使用POST请求
+                    apiUrl = window.API.getApiUrl('/sops');
+                    method = 'POST';
+                    console.log('创建SOP，API URL:', apiUrl);
+                }
+                
+                // 详细记录请求信息
+                console.log('请求方法:', method);
+                console.log('请求URL:', apiUrl);
+                console.log('FormData内容:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(`  ${key}:`, value);
+                }
+                
                 const response = await fetch(apiUrl, {
-                    method: 'POST',
+                    method: method,
                     body: formData
                 });
                 
+                console.log('响应状态:', response.status, response.statusText);
+                console.log('响应头:', Object.fromEntries(response.headers.entries()));
+                
+                const responseText = await response.text();
+                console.log('响应文本:', responseText);
+                
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`保存失败: ${response.status} - ${errorText}`);
+                    throw new Error(`保存失败: ${response.status} - ${responseText}`);
                 }
                 
-                const result = await response.json();
-                console.log('保存成功:', result);
+                const result = JSON.parse(responseText);
+                console.log('保存成功，返回数据:', result);
                 
-                alert('SOP保存成功！');
+                // 特别检查返回的department字段
+                if (result.data && result.data.department) {
+                    console.log('API返回的部门字段:', result.data.department);
+                    console.log('期望的部门字段:', document.getElementById('department').value);
+                }
+                
+                alert(currentSOPId ? 'SOP更新成功！' : 'SOP保存成功！');
                 closeModal();
                 loadSOPs();
                 
@@ -555,10 +636,86 @@
             window.location.href = `sop-detail-clean-fixed.html?sop_id=${id}`;
         }
 
+        // 获取SOP数据并填充编辑表单
+        async function editSOPData(id) {
+            try {
+                console.log('正在获取SOP数据，ID:', id);
+                const apiUrl = window.API.getApiUrl(`/sops/${id}`);
+                console.log('API URL:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                console.log('响应状态:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('响应错误文本:', errorText);
+                    throw new Error(`获取SOP失败: ${response.status} - ${errorText}`);
+                }
+                
+                const responseText = await response.text();
+                console.log('响应文本:', responseText);
+                
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('JSON解析失败:', e);
+                    throw new Error(`响应不是有效的JSON: ${responseText.substring(0, 100)}...`);
+                }
+                
+                console.log('解析后的SOP数据:', result);
+                console.log('API响应状态:', result.status);
+                console.log('API响应消息:', result.message);
+                console.log('API响应数据:', result.data);
+                
+                if (result.status === 'success') {
+                    const sop = result.data;
+                    console.log('SOP详情:', {
+                        id: sop.id,
+                        name: sop.name,
+                        department: sop.department,
+                        version: sop.version,
+                        category: sop.category,
+                        file_name: sop.file_name,
+                        file_path: sop.file_path
+                    });
+                    
+                    // 填充表单
+                    currentSOPId = sop.id;
+                    document.getElementById('modalTitle').textContent = '编辑SOP';
+                    document.getElementById('name').value = sop.name || '';
+                    document.getElementById('version').value = sop.version || 'v1.0';
+                    document.getElementById('category').value = sop.category || 'general';
+                    // 动态加载部门列表并设置选中的部门
+                    if (window.departmentUtils && window.departmentUtils.populateDepartmentSelect) {
+                        await window.departmentUtils.populateDepartmentSelect('department', sop.department || '');
+                    } else {
+                        document.getElementById('department').value = sop.department || '';
+                    }
+                    
+                    // 文件相关字段（编辑时不可更改文件）
+                    document.getElementById('fileName').textContent = `当前文件: ${sop.file_name || '未设置'}`;
+                    selectedFile = null; // 编辑时不重新上传文件
+                    
+                    // 显示模态框
+                    document.getElementById('sopModal').style.display = 'flex';
+                    
+                    console.log('表单填充完成，部门字段值:', document.getElementById('department').value);
+                } else {
+                    console.error('API返回错误状态:', result);
+                    throw new Error(result.message || '获取SOP数据失败');
+                }
+                
+            } catch (error) {
+                console.error('获取SOP数据失败:', error);
+                alert(`获取SOP数据失败: ${error.message}`);
+            }
+        }
+
         // 编辑SOP
-        function editSOP(id) {
+        async function editSOP(id) {
             // 先获取SOP数据，然后填充到编辑模态框
-            editSOPData(id);
+            await editSOPData(id);
         }
 
         // 生成SOP表格行

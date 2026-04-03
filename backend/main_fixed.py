@@ -17,6 +17,10 @@ import random
 import sqlite3
 import tempfile
 import shutil
+import sys
+
+# 添加当前目录到Python路径，以便导入dashboard_api
+sys.path.append(os.path.dirname(__file__))
 
 app = FastAPI()
 
@@ -33,11 +37,17 @@ app.add_middleware(
 frontend_dir = os.path.join(os.path.dirname(__file__), "../frontend")
 app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
+# 挂载uploads目录
+uploads_dir = os.path.join(os.path.dirname(__file__), "../data/uploads")
+app.mount("/static/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+
 # ========== 数据库连接函数 ==========
 def get_db_connection():
     """获取数据库连接"""
-    db_path = Path("E:/openclaw/projects/safety-audit-system/data/safety_audit.db")
-    conn = sqlite3.connect(str(db_path))
+    # 使用相对路径，兼容Windows和Mac/Linux
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    db_path = os.path.join(base_dir, "data", "safety_audit.db")
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row  # 返回字典格式的行
     return conn
 
@@ -94,7 +104,7 @@ async def get_all_sops():
     try:
         # 查询所有SOP
         cursor.execute('''
-            SELECT id, name, version, file_path, category, 
+            SELECT id, name, version, file_path, category, department,
                    last_review_date, content, created_at, updated_at, file_size
             FROM safety_operation_procedures
             ORDER BY created_at DESC
@@ -163,20 +173,20 @@ async def get_all_sops():
                 "version": sop[2],
                 "file_path": sop[3],
                 "category": sop[4],
-                "last_review_date": sop[5],
-                "content": sop[6],
-                "created_at": sop[7],
-                "updated_at": sop[8],
-                "file_size": sop[9],
+                "department": sop[5],  # 使用实际的department值
+                "last_review_date": sop[6],
+                "content": sop[7],
+                "created_at": sop[8],
+                "updated_at": sop[9],
+                "file_size": sop[10],
                 # 添加缺失的字段，使用默认值
                 "sop_id": sop_id,  # 使用id作为sop_id
                 "file_name": os.path.basename(sop[3]) if sop[3] else "",  # 从file_path提取文件名
-                "department": "安全部",  # 默认值
                 "compliance_status": compliance_status,  # 从审核记录获取
                 "audit_score": audit_score,  # 从审核记录获取
                 "last_audit_date": last_audit_date,  # 最近审核日期
                 "last_auditor": last_auditor,  # 最近审核人
-                "last_updated": sop[8],  # 使用updated_at
+                "last_updated": sop[9],  # 使用updated_at
                 # 添加关联标准数量
                 "standards_count": standards_count
             }
@@ -218,7 +228,7 @@ async def search_sops(
         
         query = """
         SELECT 
-            id, name, version, file_path, category, 
+            id, name, version, file_path, category, department,
             last_review_date, content, file_size,
             created_at, updated_at
         FROM safety_operation_procedures 
@@ -300,15 +310,15 @@ async def search_sops(
                 "version": sop[2],
                 "file_path": sop[3],
                 "category": sop[4],
-                "last_review_date": sop[5],
-                "content": sop[6],
-                "file_size": sop[7],
-                "created_at": sop[8],
-                "updated_at": sop[9],
+                "department": sop[5],  # 使用实际的department值
+                "last_review_date": sop[6],
+                "content": sop[7],
+                "file_size": sop[8],
+                "created_at": sop[9],
+                "updated_at": sop[10],
                 # 添加前端兼容字段
                 "sop_id": sop_id,
                 "file_name": os.path.basename(sop[3]) if sop[3] else "",
-                "department": "安全部",
                 "compliance_status": compliance_status,  # 从审核记录获取
                 "audit_score": audit_score,  # 从审核记录获取
                 "last_audit_date": last_audit_date,  # 最近审核日期
@@ -341,9 +351,29 @@ async def create_sop(
     name: str = Form(...),
     version: str = Form(...),
     category: str = Form(...),
+    department: str = Form(None),  # 改为None，不设默认值
     file: UploadFile = File(...)
 ):
     """创建新SOP"""
+    print(f"\n{'='*60}")
+    print("创建SOP - 紧急修复版本")
+    print(f"{'='*60}")
+    print(f"接收到的参数:")
+    print(f"  name: {name}")
+    print(f"  version: {version}")
+    print(f"  category: {category}")
+    print(f"  department参数值: {department} (类型: {type(department)})")
+    print(f"  file: {file.filename}")
+    
+    # 如果department为None，使用"安全部"作为默认值
+    if department is None:
+        department = "安全部"
+        print(f"  注意: department参数为None，使用默认值: {department}")
+    else:
+        print(f"  使用前端提供的department值: {department}")
+    
+    print(f"{'='*60}\n")
+    
     try:
         # 检查文件类型 - 只允许PDF
         file_ext = os.path.splitext(file.filename)[1].lower()
@@ -379,13 +409,26 @@ async def create_sop(
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # 调试：打印要插入的数据
+        print(f"\n=== 插入数据库的数据 ===")
+        print(f"  id: {new_id}")
+        print(f"  name: {name}")
+        print(f"  version: {version}")
+        print(f"  file_path: {file_path}")
+        print(f"  category: {category}")
+        print(f"  department: {department}")
+        print(f"  last_review_date: {datetime.now().strftime('%Y-%m-%d')}")
+        print(f"  content: 新创建的SOP: {name}")
+        print(f"  file_size: {file_size}")
+        print("=====================\n")
+        
         cursor.execute('''
         INSERT INTO safety_operation_procedures 
-        (id, name, version, file_path, category, last_review_date, content, file_size)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (id, name, version, file_path, category, department, last_review_date, content, file_size)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             new_id, name, version, file_path, 
-            category, datetime.now().strftime('%Y-%m-%d'), 
+            category, department, datetime.now().strftime('%Y-%m-%d'), 
             f"新创建的SOP: {name}",
             file_size
         ))
@@ -393,7 +436,7 @@ async def create_sop(
         # 获取刚插入的记录
         cursor.execute('''
         SELECT 
-            id, name, version, file_path, category, 
+            id, name, version, file_path, category, department,
             last_review_date, content, file_size,
             created_at, updated_at
         FROM safety_operation_procedures
@@ -405,25 +448,33 @@ async def create_sop(
         conn.close()
         
         # 转换为字典
+        print(f"\n=== 创建返回字典 ===")
+        print(f"从数据库查询到的数据:")
+        for i, value in enumerate(sop_data):
+            print(f"  [{i}]: {value}")
+        
         sop_dict = {
             "id": sop_data[0],
             "name": sop_data[1],
             "version": sop_data[2],
             "file_path": sop_data[3],
             "category": sop_data[4],
-            "last_review_date": sop_data[5],
-            "content": sop_data[6],
-            "file_size": sop_data[7],
-            "created_at": sop_data[8],
-            "updated_at": sop_data[9],
+            "department": sop_data[5],  # 使用实际的department值
+            "last_review_date": sop_data[6],
+            "content": sop_data[7],
+            "file_size": sop_data[8],
+            "created_at": sop_data[9],
+            "updated_at": sop_data[10],
             # 添加前端兼容字段
             "sop_id": sop_data[0],
             "file_name": os.path.basename(sop_data[3]) if sop_data[3] else "",
-            "department": "安全部",
             "compliance_status": "pending",
             "audit_score": None,
-            "last_updated": sop_data[9]
+            "last_updated": sop_data[10]
         }
+        
+        print(f"\n创建的字典中的department字段: {sop_dict['department']}")
+        print(f"{'='*60}\n")
         
         return {
             "status": "success",
@@ -436,7 +487,104 @@ async def create_sop(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建SOP失败: {str(e)}")
 
-@app.get("/api/sops/{sop_id}")
+@app.put("/api/sops/{sop_id}")
+async def update_sop(
+    sop_id: str,
+    name: str = Form(None),
+    version: str = Form(None),
+    category: str = Form(None),
+    department: str = Form(None)
+):
+    """更新SOP信息"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 检查SOP是否存在
+        cursor.execute('SELECT id FROM safety_operation_procedures WHERE id = ?', (sop_id,))
+        if not cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail=f"未找到SOP: {sop_id}")
+        
+        # 构建更新语句
+        update_fields = []
+        params = []
+        
+        if name is not None:
+            update_fields.append("name = ?")
+            params.append(name)
+        
+        if version is not None:
+            update_fields.append("version = ?")
+            params.append(version)
+        
+        if category is not None:
+            update_fields.append("category = ?")
+            params.append(category)
+        
+        if department is not None:
+            update_fields.append("department = ?")
+            params.append(department)
+        
+        # 如果没有要更新的字段
+        if not update_fields:
+            conn.close()
+            raise HTTPException(status_code=400, detail="没有提供要更新的字段")
+        
+        # 添加更新时间
+        update_fields.append("updated_at = CURRENT_TIMESTAMP")
+        
+        # 执行更新
+        update_query = f"UPDATE safety_operation_procedures SET {', '.join(update_fields)} WHERE id = ?"
+        params.append(sop_id)
+        
+        cursor.execute(update_query, params)
+        conn.commit()
+        
+        # 获取更新后的记录
+        cursor.execute('''
+        SELECT id, name, version, file_path, category, department,
+               last_review_date, content, file_size,
+               created_at, updated_at
+        FROM safety_operation_procedures
+        WHERE id = ?
+        ''', (sop_id,))
+        
+        sop_data = cursor.fetchone()
+        conn.close()
+        
+        # 转换为字典
+        sop_dict = {
+            "id": sop_data[0],
+            "name": sop_data[1],
+            "version": sop_data[2],
+            "file_path": sop_data[3],
+            "category": sop_data[4],
+            "department": sop_data[5],
+            "last_review_date": sop_data[6],
+            "content": sop_data[7],
+            "file_size": sop_data[8],
+            "created_at": sop_data[9],
+            "updated_at": sop_data[10],
+            # 添加前端兼容字段
+            "sop_id": sop_data[0],
+            "file_name": os.path.basename(sop_data[3]) if sop_data[3] else "",
+            "compliance_status": "pending",  # 需要从审核记录获取
+            "audit_score": None,
+            "last_updated": sop_data[10]
+        }
+        
+        return {
+            "status": "success",
+            "message": "SOP更新成功",
+            "data": sop_dict
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新SOP失败: {str(e)}")
+
 @app.get("/api/sops/{sop_id}")
 async def get_sop_by_id(sop_id: str):
     """根据ID获取SOP"""
@@ -445,7 +593,7 @@ async def get_sop_by_id(sop_id: str):
     
     try:
         # 只查询实际存在的字段
-        cursor.execute('SELECT id, name, version, file_path, category, last_review_date, content, created_at, updated_at, file_size FROM safety_operation_procedures WHERE id = ?', (sop_id,))
+        cursor.execute('SELECT id, name, version, file_path, category, department, last_review_date, content, created_at, updated_at, file_size FROM safety_operation_procedures WHERE id = ?', (sop_id,))
         
         sop = cursor.fetchone()
         
@@ -503,24 +651,28 @@ async def get_sop_by_id(sop_id: str):
             "version": sop[2],
             "file_path": sop[3],
             "category": sop[4],
-            "last_review_date": sop[5],
-            "content": sop[6],
-            "created_at": sop[7],
-            "updated_at": sop[8],
-            "file_size": sop[9],
+            "department": sop[5],  # 使用实际的department值
+            "last_review_date": sop[6],
+            "content": sop[7],
+            "created_at": sop[8],
+            "updated_at": sop[9],
+            "file_size": sop[10],
             # 添加缺失的字段，使用默认值
             "sop_id": sop[0],  # 使用id作为sop_id
             "file_name": os.path.basename(sop[3]) if sop[3] else "",  # 从file_path提取文件名
-            "department": "安全部",  # 默认值
             "compliance_status": compliance_status,  # 从审核记录获取
             "audit_score": audit_score,  # 从审核记录获取
             "last_audit_date": last_audit_date,  # 最近审核日期
             "last_auditor": last_auditor,  # 最近审核人
-            "last_updated": sop[8]  # 使用updated_at
+            "last_updated": sop[9]  # 使用updated_at
         }
         
         conn.close()
-        return sop_dict
+        return {
+            "status": "success",
+            "message": "获取SOP成功",
+            "data": sop_dict
+        }
         
     except HTTPException:
         if conn:
@@ -556,7 +708,7 @@ async def delete_sop(sop_id: str):
                 # 构建完整的文件路径
                 import os
                 from pathlib import Path
-                base_dir = Path("E:/openclaw/projects/safety-audit-system")
+                base_dir = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
                 full_path = base_dir / file_path
                 if full_path.exists():
                     full_path.unlink()
@@ -706,6 +858,190 @@ async def get_sop_pdf_content(sop_id: str, preview: bool = True):
             "data": None
         }
 
+# ========== 标准PDF内容提取API ==========
+@app.get("/api/standards/{standard_id}/pdf-content")
+async def get_standard_pdf_content(standard_id: str, preview: bool = True):
+    """获取标准的PDF内容（简化版，用于前端显示）"""
+    try:
+        # 1. 从数据库获取标准信息
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT file_path FROM core_standards WHERE id = ?
+        """, (standard_id,))
+        
+        standard_data = cursor.fetchone()
+        conn.close()
+        
+        if not standard_data:
+            return {
+                "status": "error",
+                "message": f"未找到标准: {standard_id}",
+                "data": None
+            }
+        
+        file_path = standard_data[0]
+        
+        if not file_path:
+            return {
+                "status": "error",
+                "message": f"标准没有关联PDF文件: {standard_id}",
+                "data": None
+            }
+        
+        # 从文件路径中提取文件名
+        if '\\' in file_path or '/' in file_path:
+            file_name = os.path.basename(file_path)
+        else:
+            file_name = file_path
+        
+        # 2. 构建文件路径
+        base_dir = os.path.dirname(__file__)
+        uploads_dir = os.path.join(base_dir, "..", "data", "uploads")
+        
+        # 处理文件名中的+号
+        actual_file_name = file_name.replace('+', '%2B')
+        actual_path = os.path.join(uploads_dir, actual_file_name)
+        
+        # 如果文件不存在，尝试原始文件名
+        if not os.path.exists(actual_path):
+            actual_path = os.path.join(uploads_dir, file_name)
+        
+        if not os.path.exists(actual_path):
+            return {
+                "status": "error",
+                "message": f"PDF文件不存在: {file_name}",
+                "data": None
+            }
+        
+        # 3. 检查文件类型
+        if not file_name.lower().endswith('.pdf'):
+            return {
+                "status": "error",
+                "message": "只支持PDF文件",
+                "data": None
+            }
+        
+        # 4. 提取文本（改进版，处理编码问题）
+        try:
+            import pdfplumber
+            import re
+            
+            with pdfplumber.open(actual_path) as pdf:
+                total_pages = len(pdf.pages)
+                
+                # 提取文本（尝试多种方法）
+                preview_text = ""
+                full_content = ""
+                
+                if total_pages > 0:
+                    # 方法1：使用pdfplumber的extract_text
+                    first_page = pdf.pages[0]
+                    page_text = first_page.extract_text()
+                    
+                    if page_text:
+                        # 清理文本：移除多余空格和换行
+                        page_text = re.sub(r'\s+', ' ', page_text).strip()
+                        
+                        if preview:
+                            # 预览模式：只返回前500字符
+                            preview_text = page_text[:500]
+                            if len(page_text) > 500:
+                                preview_text += "..."
+                        else:
+                            preview_text = page_text
+                    
+                    # 如果方法1提取失败或质量差，尝试方法2：使用extract_words
+                    if not page_text or len(page_text.strip()) < 50:
+                        words = first_page.extract_words()
+                        if words:
+                            page_text = ' '.join([word['text'] for word in words])
+                            page_text = re.sub(r'\s+', ' ', page_text).strip()
+                            
+                            if preview:
+                                preview_text = page_text[:500]
+                                if len(page_text) > 500:
+                                    preview_text += "..."
+                            else:
+                                preview_text = page_text
+                    
+                    # 如果不是预览模式，提取所有页面
+                    if not preview and total_pages > 1:
+                        all_text_parts = []
+                        for i, page in enumerate(pdf.pages):
+                            page_text = page.extract_text()
+                            if not page_text or len(page_text.strip()) < 10:
+                                # 尝试使用extract_words
+                                words = page.extract_words()
+                                if words:
+                                    page_text = ' '.join([word['text'] for word in words])
+                            
+                            if page_text:
+                                # 清理文本
+                                page_text = re.sub(r'\s+', ' ', page_text).strip()
+                                all_text_parts.append(f"=== 第 {i+1} 页 ===\n{page_text}\n")
+                        
+                        if all_text_parts:
+                            full_content = "\n".join(all_text_parts)
+                
+                result = {
+                    "standard_id": standard_id,
+                    "file_name": file_name,
+                    "total_pages": total_pages,
+                    "has_content": bool(preview_text and len(preview_text.strip()) > 10),
+                    "content_preview": preview_text,
+                    "content_length": len(preview_text) if preview_text else 0,
+                    "extracted_at": datetime.now().isoformat(),
+                    "file_size": os.path.getsize(actual_path),
+                    "file_path": actual_path,
+                    "is_preview": preview,
+                    "extraction_method": "pdfplumber"
+                }
+                
+                if full_content:
+                    result["full_content"] = full_content
+                    result["content_length"] = len(full_content)
+                
+                # 检查文本质量
+                if preview_text:
+                    # 检查是否包含中文字符
+                    chinese_chars = re.findall(r'[\u4e00-\u9fff]', preview_text)
+                    if len(chinese_chars) < 5 and len(preview_text) > 50:
+                        result["warning"] = "提取的文本可能包含编码问题，PDF可能是扫描版或使用特殊字体"
+                        result["text_quality"] = "low"
+                    else:
+                        result["text_quality"] = "good"
+        
+        except ImportError:
+            # 如果没有pdfplumber，返回基本信息
+            result = {
+                "standard_id": standard_id,
+                "file_name": file_name,
+                "total_pages": 0,
+                "has_content": False,
+                "content_preview": "PDF处理库未安装，无法提取文本内容",
+                "content_length": 0,
+                "extracted_at": datetime.now().isoformat(),
+                "file_size": os.path.getsize(actual_path) if os.path.exists(actual_path) else 0,
+                "file_path": actual_path,
+                "is_preview": preview,
+                "warning": "请安装pdfplumber库以提取PDF文本内容: pip install pdfplumber"
+            }
+        
+        return {
+            "status": "success",
+            "message": "PDF内容提取成功",
+            "data": result
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"PDF处理错误: {str(e)}",
+            "data": None
+        }
+
 # ========== 文件下载API ==========
 def resolve_file_path(file_path: str) -> str:
     """解析文件路径，尝试多种可能性"""
@@ -775,6 +1111,138 @@ async def download_sop_file(sop_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"下载错误: {str(e)}")
+
+# ========== 标准文件下载端点 ==========
+@app.get("/api/standards/{standard_id}/download")
+async def download_standard_file(standard_id: str):
+    """下载标准文件"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT file_path FROM core_standards 
+            WHERE id = ?
+        """, (standard_id,))
+        
+        standard_data = cursor.fetchone()
+        conn.close()
+        
+        if not standard_data:
+            raise HTTPException(status_code=404, detail=f"未找到标准: {standard_id}")
+        
+        file_path = standard_data[0]
+        
+        if not file_path:
+            raise HTTPException(status_code=404, detail=f"标准没有关联文件: {standard_id}")
+        
+        # 提取文件名
+        if '\\' in file_path or '/' in file_path:
+            file_name = os.path.basename(file_path)
+        else:
+            file_name = file_path
+        
+        # 解析文件路径
+        actual_path = resolve_file_path(file_path)
+        
+        if not actual_path or not os.path.exists(actual_path):
+            raise HTTPException(status_code=404, detail=f"文件不存在: {file_path}")
+        
+        # 返回文件
+        return FileResponse(
+            actual_path,
+            filename=file_name,
+            media_type='application/octet-stream'
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"下载错误: {str(e)}")
+
+# ========== 标准文件查看端点 ==========
+@app.get("/api/standards/{standard_id}/view")
+async def view_standard_file(standard_id: str):
+    """查看标准文件（返回文件URL）"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT file_path FROM core_standards 
+            WHERE id = ?
+        """, (standard_id,))
+        
+        standard_data = cursor.fetchone()
+        conn.close()
+        
+        if not standard_data:
+            raise HTTPException(status_code=404, detail=f"未找到标准: {standard_id}")
+        
+        file_path = standard_data[0]
+        
+        if not file_path:
+            raise HTTPException(status_code=404, detail=f"标准没有关联文件: {standard_id}")
+        
+        # 提取文件名
+        if '\\' in file_path or '/' in file_path:
+            file_name = os.path.basename(file_path)
+        else:
+            file_name = file_path
+        
+        # URL编码文件名（只编码+号）
+        encoded_file_name = file_name.replace('+', '%2B')
+        
+        # 返回文件信息
+        return {
+            "standard_id": standard_id,
+            "file_name": file_name,
+            "encoded_file_name": encoded_file_name,
+            "file_url": f"/static/uploads/{encoded_file_name}",
+            "direct_url": f"/api/files/standard/{encoded_file_name}",  # 新增的直接访问端点
+            "download_url": f"/api/standards/{standard_id}/download",
+            "message": "使用file_url访问文件，或使用download_url下载文件"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取文件信息错误: {str(e)}")
+
+# ========== 直接文件访问端点 ==========
+@app.get("/api/files/standard/{file_name:path}")
+async def get_standard_file(file_name: str):
+    """直接访问标准文件（绕过StaticFiles的URL编码问题）"""
+    try:
+        # 解码文件名
+        decoded_file_name = file_name.replace('%2B', '+')
+        
+        # 构建文件路径
+        base_dir = os.path.dirname(__file__)
+        uploads_dir = os.path.join(base_dir, "..", "data", "uploads")
+        file_path = os.path.join(uploads_dir, decoded_file_name)
+        
+        if not os.path.exists(file_path):
+            # 尝试查找文件（不区分大小写）
+            files = os.listdir(uploads_dir)
+            matching_files = [f for f in files if f.lower() == decoded_file_name.lower()]
+            
+            if matching_files:
+                file_path = os.path.join(uploads_dir, matching_files[0])
+            else:
+                raise HTTPException(status_code=404, detail=f"文件不存在: {decoded_file_name}")
+        
+        # 返回文件
+        return FileResponse(
+            file_path,
+            filename=decoded_file_name,
+            media_type='application/pdf'
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"文件访问错误: {str(e)}")
 
 @app.get("/api/files/{sop_id}/info")
 async def get_sop_file_info(sop_id: str):
@@ -1152,13 +1620,17 @@ async def get_standard(standard_id: str):
             raise HTTPException(status_code=404, detail=f"未找到标准: {standard_id}")
         
         return {
-            "id": std[0],
-            "name": std[1],
-            "standard_no": std[2],
-            "category": std[3],
-            "effective_date": std[4],
-            "file_path": std[5],
-            "created_at": std[6]
+            "status": "success",
+            "message": "获取标准成功",
+            "data": {
+                "id": std[0],
+                "name": std[1],
+                "standard_no": std[2],
+                "category": std[3],
+                "effective_date": std[4],
+                "file_path": std[5],
+                "created_at": std[6]
+            }
         }
         
     except HTTPException:
@@ -1289,9 +1761,21 @@ async def get_standard_sops(standard_id: str):
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # 首先检查标准是否存在
+        cursor.execute("SELECT id, standard_no, name FROM core_standards WHERE id = ?", (standard_id,))
+        standard_data = cursor.fetchone()
+        
+        if not standard_data:
+            conn.close()
+            return {
+                "status": "success",
+                "message": f"标准 {standard_id} 不存在",
+                "data": []
+            }
+        
         # 查询关联的SOP
         cursor.execute("""
-            SELECT DISTINCT m.sop_id, s.name, s.category, s.department
+            SELECT DISTINCT m.sop_id, s.id, s.name, s.version, s.department, s.category, s.created_at
             FROM mapping_matrix m
             JOIN safety_operation_procedures s ON m.sop_id = s.id
             WHERE m.standard_id = ?
@@ -1303,10 +1787,12 @@ async def get_standard_sops(standard_id: str):
         result = []
         for sop in sops:
             result.append({
-                "sop_id": sop[0],
-                "name": sop[1],
-                "category": sop[2],
-                "department": sop[3]
+                "id": sop[1] if sop[1] else sop[0],  # 使用s.id，如果不存在则使用m.sop_id
+                "name": sop[2],  # 使用s.name作为标题
+                "version": sop[3],  # 版本号
+                "department": sop[4],  # 部门
+                "category": sop[5],  # 分类
+                "created_at": sop[6]  # 创建时间
             })
         
         return {
@@ -1317,6 +1803,65 @@ async def get_standard_sops(standard_id: str):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"查询标准关联SOP失败: {str(e)}")
+
+# ========== 直接PDF文件服务端点（绕过StaticFiles问题） ==========
+@app.get("/api/files/pdf/{standard_id}")
+async def get_pdf_file(standard_id: str):
+    """直接提供PDF文件服务，解决StaticFiles的编码问题"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 获取标准信息
+        cursor.execute("SELECT file_path FROM core_standards WHERE id = ?", (standard_id,))
+        standard_data = cursor.fetchone()
+        conn.close()
+        
+        if not standard_data:
+            raise HTTPException(status_code=404, detail=f"标准 {standard_id} 不存在")
+        
+        file_path = standard_data[0]
+        if not file_path:
+            raise HTTPException(status_code=404, detail=f"标准 {standard_id} 没有关联PDF文件")
+        
+        # 提取文件名
+        if '\\' in file_path or '/' in file_path:
+            file_name = os.path.basename(file_path)
+        else:
+            file_name = file_path
+        
+        # 构建实际文件路径
+        base_dir = os.path.dirname(__file__)
+        uploads_dir = os.path.join(base_dir, "..", "data", "uploads")
+        actual_path = os.path.join(uploads_dir, file_name)
+        
+        # 检查文件是否存在
+        if not os.path.exists(actual_path):
+            # 尝试解码+号
+            decoded_file_name = file_name.replace('%2B', '+')
+            actual_path = os.path.join(uploads_dir, decoded_file_name)
+            
+            if not os.path.exists(actual_path):
+                # 尝试原始文件名
+                actual_path = os.path.join(uploads_dir, file_name.replace('+', ' '))
+                
+                if not os.path.exists(actual_path):
+                    raise HTTPException(status_code=404, detail=f"PDF文件不存在: {file_name}")
+        
+        # 返回文件 - 设置为inline以便在浏览器中显示
+        return FileResponse(
+            path=actual_path,
+            filename=file_name,
+            media_type='application/pdf',
+            headers={
+                'Content-Disposition': f'inline; filename="{file_name}"'
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"文件服务错误: {str(e)}")
 
 # ========== SOP与标准关联管理API ==========
 @app.post("/api/mappings")
@@ -1777,11 +2322,324 @@ async def get_audit_summary(audit_id: int):
             "data": None
         }
 
+# ========== 部门管理API ==========
+
+@app.get("/api/departments")
+async def get_departments(active_only: bool = False, include_inactive: bool = False):
+    """获取部门列表"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        if active_only:
+            query = "SELECT * FROM departments WHERE is_active = 1 ORDER BY sort_order, name"
+        elif include_inactive:
+            query = "SELECT * FROM departments ORDER BY sort_order, name"
+        else:
+            query = "SELECT * FROM departments WHERE is_active = 1 ORDER BY sort_order, name"
+        
+        cursor.execute(query)
+        departments = cursor.fetchall()
+        conn.close()
+        
+        departments_list = []
+        for dept in departments:
+            departments_list.append({
+                "id": dept["id"],
+                "name": dept["name"],
+                "code": dept["code"],
+                "description": dept["description"],
+                "is_active": bool(dept["is_active"]),
+                "sort_order": dept["sort_order"],
+                "created_at": dept["created_at"],
+                "updated_at": dept["updated_at"]
+            })
+        
+        return {
+            "status": "success",
+            "message": "获取部门列表成功",
+            "data": departments_list,
+            "count": len(departments_list)
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"获取部门列表失败: {str(e)}",
+            "data": None
+        }
+
+@app.get("/api/departments/active")
+async def get_active_departments():
+    """获取启用的部门列表（用于下拉框）"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, name, code 
+            FROM departments 
+            WHERE is_active = 1 
+            ORDER BY sort_order, name
+        """)
+        
+        departments = cursor.fetchall()
+        conn.close()
+        
+        departments_list = []
+        for dept in departments:
+            departments_list.append({
+                "id": dept["id"],
+                "name": dept["name"],
+                "code": dept["code"]
+            })
+        
+        return {
+            "status": "success",
+            "message": "获取启用的部门列表成功",
+            "data": departments_list
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"获取启用的部门列表失败: {str(e)}",
+            "data": None
+        }
+
+@app.get("/api/departments/{department_id}")
+async def get_department(department_id: int):
+    """获取单个部门详情"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM departments WHERE id = ?", (department_id,))
+        dept = cursor.fetchone()
+        conn.close()
+        
+        if not dept:
+            raise HTTPException(status_code=404, detail=f"部门不存在: {department_id}")
+        
+        return {
+            "status": "success",
+            "message": "获取部门详情成功",
+            "data": {
+                "id": dept["id"],
+                "name": dept["name"],
+                "code": dept["code"],
+                "description": dept["description"],
+                "is_active": bool(dept["is_active"]),
+                "sort_order": dept["sort_order"],
+                "created_at": dept["created_at"],
+                "updated_at": dept["updated_at"]
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"获取部门详情失败: {str(e)}",
+            "data": None
+        }
+
+@app.post("/api/departments")
+async def create_department(
+    name: str = Form(...),
+    code: str = Form(...),
+    description: str = Form(None),
+    is_active: bool = Form(True),
+    sort_order: int = Form(0)
+):
+    """创建新部门"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 检查部门名称是否已存在
+        cursor.execute("SELECT id FROM departments WHERE name = ? OR code = ?", (name, code))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="部门名称或代码已存在")
+        
+        # 插入新部门
+        cursor.execute("""
+            INSERT INTO departments (name, code, description, is_active, sort_order, updated_at)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """, (name, code, description, 1 if is_active else 0, sort_order))
+        
+        department_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        return {
+            "status": "success",
+            "message": "部门创建成功",
+            "data": {
+                "id": department_id,
+                "name": name,
+                "code": code
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"创建部门失败: {str(e)}",
+            "data": None
+        }
+
+@app.put("/api/departments/{department_id}")
+async def update_department(
+    department_id: int,
+    name: str = Form(None),
+    code: str = Form(None),
+    description: str = Form(None),
+    is_active: bool = Form(None),
+    sort_order: int = Form(None)
+):
+    """更新部门信息"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 检查部门是否存在
+        cursor.execute("SELECT id FROM departments WHERE id = ?", (department_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"部门不存在: {department_id}")
+        
+        # 检查名称和代码是否与其他部门冲突
+        if name:
+            cursor.execute("SELECT id FROM departments WHERE name = ? AND id != ?", (name, department_id))
+            if cursor.fetchone():
+                raise HTTPException(status_code=400, detail="部门名称已存在")
+        
+        if code:
+            cursor.execute("SELECT id FROM departments WHERE code = ? AND id != ?", (code, department_id))
+            if cursor.fetchone():
+                raise HTTPException(status_code=400, detail="部门代码已存在")
+        
+        # 构建更新语句
+        update_fields = []
+        update_values = []
+        
+        if name is not None:
+            update_fields.append("name = ?")
+            update_values.append(name)
+        
+        if code is not None:
+            update_fields.append("code = ?")
+            update_values.append(code)
+        
+        if description is not None:
+            update_fields.append("description = ?")
+            update_values.append(description)
+        
+        if is_active is not None:
+            update_fields.append("is_active = ?")
+            update_values.append(1 if is_active else 0)
+        
+        if sort_order is not None:
+            update_fields.append("sort_order = ?")
+            update_values.append(sort_order)
+        
+        # 总是更新updated_at
+        update_fields.append("updated_at = CURRENT_TIMESTAMP")
+        
+        if update_fields:
+            update_values.append(department_id)
+            update_query = f"UPDATE departments SET {', '.join(update_fields)} WHERE id = ?"
+            cursor.execute(update_query, update_values)
+            conn.commit()
+        
+        conn.close()
+        
+        return {
+            "status": "success",
+            "message": "部门更新成功",
+            "data": {
+                "id": department_id
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"更新部门失败: {str(e)}",
+            "data": None
+        }
+
+@app.delete("/api/departments/{department_id}")
+async def delete_department(department_id: int):
+    """删除部门（软删除，设置为未启用）"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 检查部门是否存在
+        cursor.execute("SELECT id FROM departments WHERE id = ?", (department_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"部门不存在: {department_id}")
+        
+        # 检查是否有SOP使用此部门
+        cursor.execute("SELECT COUNT(*) FROM safety_operation_procedures WHERE department = (SELECT name FROM departments WHERE id = ?)", (department_id,))
+        sop_count = cursor.fetchone()[0]
+        
+        if sop_count > 0:
+            raise HTTPException(status_code=400, detail=f"有 {sop_count} 个SOP使用此部门，无法删除")
+        
+        # 软删除：设置为未启用
+        cursor.execute("UPDATE departments SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (department_id,))
+        conn.commit()
+        conn.close()
+        
+        return {
+            "status": "success",
+            "message": "部门已禁用",
+            "data": {
+                "id": department_id
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"删除部门失败: {str(e)}",
+            "data": None
+        }
+
+# ========== 标准分类管理API ==========
+
+# 导入分类管理API
+try:
+    from category_api import router as category_router
+    app.include_router(category_router)
+    print("[SUCCESS] 标准分类管理API路由注册成功")
+except Exception as e:
+    print(f"[WARNING] 标准分类管理API路由注册失败: {e}")
+
 if __name__ == "__main__":
     import uvicorn
     print("启动安全智能审核系统后端服务...")
     print("服务地址: http://localhost:8000")
     print("API文档: http://localhost:8000/docs")
+    
+    # 导入并设置仪表板API路由
+    try:
+        from dashboard_api import setup_dashboard_routes
+        setup_dashboard_routes(app)
+        print("[SUCCESS] 仪表板API路由已注册")
+    except ImportError as e:
+        print(f"[WARNING] 无法导入仪表板API: {e}")
+    except Exception as e:
+        print(f"[WARNING] 设置仪表板API路由失败: {e}")
     
     # 打印路由
     print("\n已注册的路由:")

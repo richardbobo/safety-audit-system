@@ -1,293 +1,216 @@
-# 安全智能审核系统
+# 安全智能审核系统 - 纯净版
 
-一个基于FastAPI和现代Web技术构建的企业安全操作规程(SOP)智能审核系统。
+## 项目概述
+安全智能审核系统是一个用于管理安全操作规程(SOP)和标准的智能系统，包含AI审核功能。本版本为纯净版，已移除所有测试和调试文件，只保留核心功能文件。
 
-## 🎯 系统功能
+## 系统架构
 
-### 核心功能
-1. **SOP管理** - 创建、查看、搜索、管理安全操作规程
-2. **标准库管理** - 管理安全标准和规范
-3. **智能关联** - SOP与标准的智能关联管理
-4. **文件管理** - PDF文件上传、下载、预览
-5. **智能审核** - AI驱动的SOP合规性审核
-6. **报告生成** - 自动生成审核报告
+### 后端服务
+1. **主后端服务** (端口8000)
+   - 文件: `backend/main_fixed.py`
+   - 功能: SOP管理、标准管理、审核记录、用户管理、部门管理、分类管理
+   - 特点: 已修复所有已知问题，API响应格式统一
 
-### 技术特性
-- **前后端分离** - 现代化Web架构
-- **RESTful API** - 完整的API接口设计
-- **响应式设计** - 适配各种设备屏幕
-- **实时搜索** - 快速检索SOP和标准
-- **文件预览** - 在线PDF预览功能
-- **智能分析** - 基于AI的合规性分析
+2. **AI审核服务** (端口8002) - 可选
+   - 文件: `backend/ai_audit_api_deterministic.py`
+   - 功能: AI智能审核、任务管理、审核历史
+   - 特点: 确定性输出、DeepSeek集成
 
-## 🚀 快速开始
+### 前端界面
+1. **仪表板** - `frontend/dashboard.html`
+2. **SOP管理** - `frontend/sops.html` (已修复部门字段和编辑功能)
+3. **标准库管理** - `frontend/standards.html` (已修复编辑功能和分类管理)
+4. **部门管理** - `frontend/departments.html` (部门自定义管理)
+5. **分类管理** - `frontend/categories.html` (标准分类自定义管理)
+6. **标准详情** - `frontend/standard-detail-clean.html`
+7. **SOP详情** - `frontend/sop-detail-clean-fixed.html`
 
-### 环境要求
-- Python 3.8+
-- SQLite3
-- 现代浏览器（Chrome/Firefox/Edge）
+### 核心功能模块
+1. **AI审核模块** - `frontend/ai-audit-fixed.js`
+2. **配置模块** - `frontend/config.js`
+3. **仪表板逻辑** - `frontend/dashboard.js`
+4. **标准详情逻辑** - `frontend/standard-detail-final.js`
+5. **部门工具** - `frontend/department-utils.js`
+6. **分类工具** - `frontend/category-utils.js`
+7. **样式文件** - `frontend/styles.css`
 
-### 安装步骤
+## 已实现的核心功能
 
-1. **克隆项目**
+### 1. SOP管理功能
+- ✅ 创建SOP（支持文件上传）
+- ✅ 编辑SOP（支持不重新上传文件）
+- ✅ 删除SOP（安全删除）
+- ✅ 查看SOP详情
+- ✅ 部门字段管理（自定义部门）
+
+### 2. 标准库管理功能
+- ✅ 上传标准文件（PDF/DOC/DOCX）
+- ✅ 编辑标准信息
+- ✅ 删除标准
+- ✅ 查看标准详情
+- ✅ 分类管理（自定义分类）
+
+### 3. 自定义管理功能
+- ✅ 部门自定义管理（增删改查）
+- ✅ 分类自定义管理（增删改查）
+- ✅ 显示顺序控制
+- ✅ 启用/禁用状态管理
+
+### 4. AI审核功能
+- ✅ AI智能审核
+- ✅ 审核历史记录
+- ✅ 审核结果统计
+- ✅ 确定性输出
+
+### 5. 系统管理功能
+- ✅ 用户管理
+- ✅ 仪表板统计
+- ✅ 文件管理
+- ✅ 系统健康检查
+
+## 启动指南
+
+### 1. 启动主后端服务
 ```bash
-git clone https://github.com/richardbobo/safety-audit-system.git
-cd safety-audit-system
+cd projects/safety-audit-system
+python backend/main_fixed.py
 ```
+访问: http://localhost:8000
 
-2. **安装依赖**
+**注意**: 首次运行会自动创建必要的目录结构。
+
+### 2. 启动AI审核服务（可选）
 ```bash
-pip install -r backend/requirements.txt
+cd projects/safety-audit-system
+python backend/ai_audit_api_deterministic.py
 ```
+访问: http://localhost:8002/health
 
-3. **配置环境变量**
-```bash
-# 复制环境变量示例文件
-cp .env.example .env
+### 3. 访问前端界面
+- 仪表板: http://localhost:8000/static/dashboard.html
+- SOP管理: http://localhost:8000/static/sops.html
+- 标准库: http://localhost:8000/static/standards.html
+- 部门管理: http://localhost:8000/static/departments.html
+- 分类管理: http://localhost:8000/static/categories.html
 
-# 编辑.env文件，设置你的DeepSeek API密钥
-# DEEPSEEK_API_KEY=your_actual_api_key_here
-```
+## 快速开始
 
-4. **初始化数据库**
-```bash
-python backend/init_database.py
-```
+### Windows用户
+1. 确保已安装Python 3.7+
+2. 安装依赖: `pip install -r requirements.txt`
+3. 双击 `start.bat` 启动服务
+4. 访问 http://localhost:8000/static/dashboard.html
 
-5. **启动后端服务**
-```bash
-# Windows - 使用安全启动脚本
-start-safe.bat
+### 默认账号
+- **用户名**: admin
+- **密码**: admin123
 
-# 或手动启动
-cd backend
-python main_fixed.py
-```
-
-5. **访问前端**
-```
-打开浏览器访问：http://localhost:8000/static/index.html
-```
-
-### 主要页面
-- **SOP管理**: `http://localhost:8000/static/sops.html`
-- **标准库**: `http://localhost:8000/static/standards.html`
-- **SOP详情**: `http://localhost:8000/static/sop-detail-fixed-v2.html?sop_id=SOP-xxx`
-- **智能审核**: `http://localhost:8000/static/smart-audit.html`
-
-## 📁 项目结构
-
+## 文件结构
 ```
 safety-audit-system/
-├── backend/                    # 后端代码
-│   ├── main_fixed.py          # 主API服务（修复完整版）
-│   ├── main.py               # 原始API服务
-│   ├── config.py             # 配置文件
-│   ├── database.py           # 数据库操作
-│   ├── requirements.txt      # Python依赖
-│   └── static/              # 静态文件服务
-├── frontend/                 # 前端代码
-│   ├── sops.html            # SOP管理页面
-│   ├── standards.html       # 标准库页面
-│   ├── sop-detail-fixed-v2.html  # SOP详情页（修复版）
-│   ├── smart-audit.html     # 智能审核页面
-│   ├── config.js            # 前端配置
-│   └── styles.css           # 样式文件
-├── data/                    # 数据目录
-│   ├── safety_audit.db     # SQLite数据库
-│   └── uploads/            # 上传文件存储
-├── tools/                  # 工具脚本
-├── README.md              # 项目说明
-└── .gitignore            # Git忽略配置
+├── backend/                    # 后端服务
+│   ├── main_fixed.py          # 主后端服务（已修复所有问题）
+│   ├── ai_audit_api_deterministic.py  # AI审核服务
+│   ├── dashboard_api.py       # 仪表板API
+│   ├── department_api.py      # 部门管理API
+│   └── category_api.py        # 分类管理API
+├── frontend/                  # 前端界面
+│   ├── dashboard.html         # 仪表板
+│   ├── sops.html             # SOP管理（已修复）
+│   ├── standards.html        # 标准库管理（已修复）
+│   ├── departments.html      # 部门管理
+│   ├── categories.html       # 分类管理
+│   ├── sop-detail-clean-fixed.html # SOP详情
+│   ├── standard-detail-clean.html  # 标准详情
+│   ├── ai-audit-fixed.js     # AI审核模块
+│   ├── config.js             # 配置模块
+│   ├── dashboard.js          # 仪表板逻辑
+│   ├── standard-detail-final.js  # 标准详情逻辑
+│   ├── department-utils.js   # 部门工具函数
+│   ├── category-utils.js     # 分类工具函数
+│   ├── styles.css            # 主样式文件
+│   ├── favicon.ico           # 网站图标
+│   ├── lib/                  # 第三方库（PDF.js等）
+│   └── modules/              # 系统模块
+├── data/                     # 数据文件
+│   ├── safety_audit.db      # SQLite数据库
+│   └── uploads/             # 上传文件存储
+├── .env                      # 环境配置
+├── .env.example             # 环境配置示例
+├── .gitignore               # Git忽略文件
+├── requirements.txt         # Python依赖
+├── start.bat                # Windows启动脚本
+├── PROJECT_STRUCTURE.md     # 项目结构文档
+└── README.md                # 本项目说明
 ```
 
-## 🔧 API接口
+## 技术特点
 
-### 核心API端点
+### 后端特点
+- **轻量级**: 基于SQLite，无需复杂配置
+- **高性能**: FastAPI框架，异步支持
+- **安全**: 参数化查询，文件验证
+- **可扩展**: 模块化设计，易于扩展
 
-#### 健康检查
-- `GET /health` - 服务健康状态
+### 前端特点
+- **响应式**: 适配不同屏幕尺寸
+- **现代化**: 简洁直观的界面设计
+- **高效**: 数据缓存，减少API调用
+- **健壮**: 完善的错误处理
 
-#### SOP管理
-- `GET /api/sops` - 获取所有SOP
-- `POST /api/sops` - 创建新SOP
-- `GET /api/sops/{id}` - 获取SOP详情
-- `GET /api/sops/search` - 搜索SOP
+### 数据库特点
+- **简单**: SQLite单文件数据库
+- **便携**: 易于备份和迁移
+- **完整**: 包含所有核心数据表
+- **可维护**: 清晰的表结构设计
 
-#### 文件管理
-- `GET /api/files/{id}/download` - 下载文件
-- `GET /api/files/{id}/info` - 获取文件信息
-- `GET /api/sops/{id}/pdf-content` - PDF预览
+## 注意事项
 
-#### 标准库管理
-- `GET /api/standards` - 获取所有标准
-- `POST /api/standards` - 创建新标准
-- `GET /api/standards/search` - 搜索标准
+### 环境要求
+1. Python 3.7+ 环境
+2. 必要的Python包（见requirements.txt）
+3. 足够的磁盘空间（用于文件上传）
 
-#### 关联管理
-- `GET /api/mappings` - 获取所有关联
-- `POST /api/mappings` - 创建关联
-- `DELETE /api/mappings/{id}` - 删除关联
-- `GET /api/sops/{id}/standards` - 获取SOP关联的标准
+### 配置要求
+1. 复制 `.env.example` 为 `.env`
+2. 配置DeepSeek API密钥（如需AI审核）
+3. 根据需要修改其他配置
 
-#### 智能审核
-- `POST /api/audit/smart` - 智能审核
-- `GET /api/audit/results/{id}` - 获取审核结果
-- `GET /api/audit/history` - 审核历史记录
+### 安全建议
+1. 首次登录后修改默认密码
+2. 定期备份数据库文件
+3. 限制上传文件类型和大小
+4. 在生产环境使用HTTPS
 
-## 🛠️ 开发指南
+## 维护指南
 
-### 后端开发
-1. **API开发**: 在`backend/main_fixed.py`中添加新的API端点
-2. **数据库操作**: 使用`backend/database.py`中的数据库连接函数
-3. **文件处理**: 参考现有的文件上传和下载实现
+### 日常维护
+1. **监控服务**: 确保服务正常运行
+2. **备份数据**: 定期备份数据库和上传文件
+3. **清理日志**: 清理不必要的日志文件
+4. **更新依赖**: 定期更新Python包
 
-### 前端开发
-1. **页面开发**: 在`frontend/`目录下创建新的HTML文件
-2. **API调用**: 使用`frontend/config.js`中的API配置
-3. **样式设计**: 修改`frontend/styles.css`文件
+### 故障排除
+1. **服务无法启动**: 检查Python版本和依赖
+2. **页面无法访问**: 检查服务端口和网络
+3. **数据库错误**: 检查数据库文件权限
+4. **上传失败**: 检查uploads目录权限
 
-### 数据库设计
-系统使用SQLite数据库，主要表结构：
-- `safety_operation_procedures` - SOP表
-- `core_standards` - 标准表
-- `mapping_matrix` - 关联表
-- `audit_results` - 审核结果表
-- `audit_details` - 审核详情表
+### 数据迁移
+1. 停止所有服务
+2. 备份当前数据库和上传文件
+3. 复制到新环境
+4. 更新配置文件
+5. 重启服务
 
-## 📊 系统特性
+## 版本信息
+- **当前版本**: 1.0.0 (纯净版)
+- **生成时间**: 2026-04-02
+- **文件数量**: 核心文件约30个
+- **数据库**: 包含测试数据，可清空后重新初始化
 
-### 已完成功能
-- ✅ 完整的SOP管理功能（增删改查）
-- ✅ 标准库管理功能
-- ✅ SOP与标准关联管理
-- ✅ 文件上传、下载、预览
-- ✅ 智能搜索功能
-- ✅ 响应式Web界面
-- ✅ 完整的API接口
-- ✅ 数据库设计优化
-- ✅ 错误处理和验证
-
-### 技术栈
-- **后端**: FastAPI, SQLite, Python
-- **前端**: HTML5, CSS3, JavaScript
-- **文件处理**: pdfplumber, python-docx
-- **AI集成**: DeepSeek API（可配置）
-- **部署**: 支持Docker容器化
-
-## 🔒 安全注意事项
-
-### API密钥安全
-1. **永远不要硬编码API密钥**：不要在代码或脚本中直接写入API密钥
-2. **使用环境变量**：通过环境变量或.env文件管理敏感信息
-3. **不要提交敏感信息**：确保.gitignore包含.env和包含敏感信息的文件
-4. **定期轮换密钥**：定期更新API密钥以提高安全性
-
-### 文件安全
-1. **上传文件验证**：系统会对上传的文件进行安全检查
-2. **文件存储安全**：上传的文件存储在安全的目录中
-3. **访问控制**：确保只有授权用户可以访问敏感文件
-
-### 网络安全
-1. **局域网部署**：建议在受信任的局域网内部署
-2. **防火墙配置**：只开放必要的端口（8000, 8002）
-3. **HTTPS支持**：生产环境建议启用HTTPS
-
-## 🔍 故障排除
-
-### 常见问题
-
-#### 1. 服务启动失败
-```bash
-# 检查端口占用
-netstat -ano | findstr :8000
-
-# 停止占用进程
-taskkill /PID <PID> /F
-```
-
-#### 2. 数据库连接问题
-```bash
-# 检查数据库文件
-python backend/verify_database.py
-
-# 重新初始化数据库
-python backend/init_database.py
-```
-
-#### 3. 文件下载问题
-- 确保`data/uploads/`目录存在且有写入权限
-- 检查数据库中的文件路径是否正确
-- 清除浏览器缓存（Ctrl+F5）
-
-#### 4. API调用404错误
-- 确保后端服务正在运行
-- 检查API端点URL是否正确
-- 查看后端日志获取详细错误信息
-
-### 调试工具
-- **API测试**: `tools/test_all_apis.py`
-- **数据库检查**: `tools/check_db_schema.py`
-- **文件验证**: `tools/check_specific_file.py`
-
-## 📈 性能优化
-
-### 数据库优化
-- 使用索引优化查询性能
-- 定期清理临时数据
-- 数据库连接池管理
-
-### 文件处理优化
-- 文件分块上传支持
-- 图片和PDF压缩
-- 缓存机制减少重复处理
-
-### 前端优化
-- 资源压缩和合并
-- 懒加载图片和组件
-- 本地存储缓存数据
-
-## 🤝 贡献指南
-
-1. Fork本仓库
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启Pull Request
-
-## 📄 许可证
-
-本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
-
-## 🙏 致谢
-
-感谢所有为项目做出贡献的开发者！
-
-## 📞 支持
-
-如有问题或建议，请：
-1. 查看 [Issues](https://github.com/yourusername/safety-audit-system/issues)
-2. 提交新的Issue
-3. 或通过邮件联系维护者
+## 支持与反馈
+如有问题或建议，请参考项目文档或联系开发团队。
 
 ---
-
-**最后更新**: 2026-03-18
-**版本**: v1.0.0
-**状态**: ✅ 生产就绪  
-## ?? �޸���ʷ 
-  
-### 2026��3��20�� - ϵͳȫ���޸� 
-**�޸�����**�� 
-
-
-## 修复历史
-
-### 2026年3月20日 - 系统全面修复
-**修复内容**：
-1. **启动脚本修复**：统一使用 `main_fixed.py`，解决编码问题
-2. **AI审核API修复**：修复损坏的API文件，添加静态文件服务
-3. **前端界面修复**：修复端口配置和API端点不匹配问题
-4. **服务启动修复**：确保所有必需服务正常运行
-
-**详细记录**：查看 [修复日志-2026-03-20.md](修复日志-2026-03-20.md)
+*纯净版已准备就绪，可直接用于生产环境*

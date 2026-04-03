@@ -1,0 +1,24 @@
+# 安全智能审核系统 - 依赖包
+
+# Web框架
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# 数据库
+sqlite3
+
+# 文件处理
+python-multipart==0.0.6
+
+# HTTP客户端
+httpx==0.25.1
+
+# 环境变量
+python-dotenv==1.0.0
+
+# 日期时间
+python-dateutil==2.8.2
+
+# 可选: AI审核功能需要
+# openai==1.3.0  # 如果使用OpenAI API
+# 注意: AI审核服务使用DeepSeek API，需要相应配置

@@ -588,7 +588,17 @@
                 const result = await response.json();
                 console.log('SOP数据:', result);
                 
-                currentSopData = result;
+                // 检查API响应格式
+                if (result.status === 'success' && result.data) {
+                    currentSopData = result.data;
+                    console.log('解析后的SOP数据:', currentSopData);
+                    console.log('部门字段:', currentSopData.department);
+                } else {
+                    // 如果格式不正确，使用整个结果
+                    console.warn('API响应格式异常，使用原始数据');
+                    currentSopData = result;
+                }
+                
                 displaySOPData();
                 
                 // 提取PDF内容
@@ -614,7 +624,7 @@
             document.getElementById('sopName').textContent = currentSopData.name || '未命名';
             document.getElementById('sopNo').textContent = currentSopData.sop_no || currentSopData.id || '-';
             document.getElementById('sopVersion').textContent = currentSopData.version || 'v1.0';
-            document.getElementById('sopDepartment').textContent = currentSopData.department || '安全部';
+            document.getElementById('sopDepartment').textContent = currentSopData.department || '未指定';
             document.getElementById('sopCreatedAt').textContent = currentSopData.created_at ? 
                 new Date(currentSopData.created_at).toLocaleString('zh-CN') : '-';
             document.getElementById('sopFileSize').textContent = currentSopData.file_size ? 
@@ -2938,7 +2948,7 @@
                 id: currentSopId,
                 name: 'AA-PFA3P-14.2-AQ-001 维修工岗位安全操作规程',
                 version: 'v1.0',
-                department: '安全部',
+                department: '未指定',  // 改为"未指定"而不是硬编码"安全部"
                 category: 'operation',
                 compliance_status: 'pending',
                 audit_score: 85.5,

@@ -17,17 +17,28 @@ document.addEventListener('DOMContentLoaded', function() {
 // 检查AI引擎状态
 async function checkAIEngine() {
     try {
-        // 修复：使用正确的健康检查端点 /health 而不是 /api/ai-audit/health
-        const response = await fetch(`${AI_AUDIT_API}/health`);
-        const data = await response.json();
+        console.log('检查AI审核引擎状态...');
         
-        const aiReadyElement = document.getElementById('ai-ready');
-        if (aiReadyElement) {
-            if (data.status === 'healthy') {
-                aiReadyElement.textContent = '就绪';
-                aiReadyElement.style.color = '#10b981';
-                
-                // 更新统计
+        // 设置超时，避免长时间等待
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        try {
+            // 修复：使用正确的健康检查端点 /health 而不是 /api/ai-audit/health
+            const response = await fetch(`${AI_AUDIT_API}/health`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
+            const data = await response.json();
+            
+            const aiReadyElement = document.getElementById('ai-ready');
+            if (aiReadyElement) {
+                if (data.status === 'healthy') {
+                    aiReadyElement.textContent = '就绪';
+                    aiReadyElement.style.color = '#10b981';
+                    
+                    // 更新统计
                 const sopCountElement = document.getElementById('sop-count');
                 if (sopCountElement) {
                     sopCountElement.textContent = data.sop_count || 0;
@@ -45,12 +56,19 @@ async function checkAIEngine() {
             }
         }
     } catch (error) {
+        console.log('AI审核服务未运行或无法连接，这不会影响主要功能');
+        
         const aiReadyElement = document.getElementById('ai-ready');
         if (aiReadyElement) {
-            aiReadyElement.textContent = '未连接';
-            aiReadyElement.style.color = '#f59e0b';
+            aiReadyElement.textContent = '服务未运行';
+            aiReadyElement.style.color = '#9ca3af';
+            aiReadyElement.title = 'AI审核服务未运行，不影响SOP查看和编辑功能';
         }
-        showMessage('error', `无法连接AI审核API: ${error.message}`);
+        
+        // 只在调试模式下显示错误消息
+        if (localStorage.getItem('debugMode') === 'true') {
+            showMessage('warning', `AI审核服务未运行: ${error.message}`);
+        }
     }
 }
 
