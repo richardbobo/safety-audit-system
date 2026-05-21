@@ -1837,11 +1837,8 @@ async def get_pdf_file(standard_id: str):
         # 返回文件 - 设置为inline以便在浏览器中显示
         return FileResponse(
             path=actual_path,
-            filename=file_name,
             media_type='application/pdf',
-            headers={
-                'Content-Disposition': f'inline; filename="{file_name}"'
-            }
+            headers={'Content-Disposition': 'inline'}
         )
         
     except HTTPException:

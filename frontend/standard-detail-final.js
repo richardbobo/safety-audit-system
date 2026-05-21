@@ -63,7 +63,6 @@ function initEventListeners() {
     document.getElementById('zoomInBtn').addEventListener('click', zoomIn);
     document.getElementById('zoomOutBtn').addEventListener('click', zoomOut);
     document.getElementById('fitWidthBtn').addEventListener('click', fitWidth);
-    document.getElementById('fitPageBtn').addEventListener('click', fitPage);
     document.getElementById('printBtn').addEventListener('click', printPDF);
 }
 
@@ -193,31 +192,72 @@ function displayStandardInfo(standard) {
 
 
 
-// 加载PDF
+// PDF.js 全局状态
+let pdfDoc = null;
+let pdfCurrentPage = 1;
+let pdfTotalPages = 0;
+let pdfRenderScale = 1.5;
+
+// 设置 PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// 加载PDF（使用PDF.js渲染，兼容所有浏览器）
 function loadPDF() {
     try {
-        const pdfEmbed = document.getElementById('pdfEmbed');
-        pdfEmbed.src = pdfUrl;
-        
-        console.log('加载PDF URL:', pdfUrl);
-        
+        console.log('PDF.js 加载 PDF URL:', pdfUrl);
+
+        // 将 iframe 替换为 canvas 容器
+        const container = document.querySelector('.pdf-viewer-container');
+        if (container) {
+            container.innerHTML = '<canvas id="pdfCanvas" style="max-width:100%;margin:0 auto;display:block;"></canvas>';
+        }
+
+        pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
+            pdfDoc = pdf;
+            pdfTotalPages = pdf.numPages;
+            pdfCurrentPage = 1;
+            document.getElementById('pageNumber').textContent = pdfTotalPages;
+            console.log('PDF 加载成功，共', pdfTotalPages, '页');
+            renderPage(pdfCurrentPage);
+        }).catch(function(error) {
+            console.error('PDF.js 加载失败:', error);
+            showPDFFallback();
+        });
+
     } catch (error) {
         console.error('加载PDF失败:', error);
-        document.getElementById('pdf-tab').innerHTML = `
-            <div class="error-state">
-                <div class="error-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="error-text">
-                    <h3>PDF加载失败</h3>
-                    <p>${error.message}</p>
-                    <p>请尝试以下解决方案：</p>
-                    <ol>
-                        <li><a href="${pdfUrl}" target="_blank">直接下载PDF文件</a></li>
-                        <li>检查网络连接</li>
-                        <li>刷新页面重试</li>
-                    </ol>
-                </div>
+        showPDFFallback();
+    }
+}
+
+function renderPage(pageNum) {
+    pdfDoc.getPage(pageNum).then(function(page) {
+        const canvas = document.getElementById('pdfCanvas');
+        const ctx = canvas.getContext('2d');
+        const viewport = page.getViewport({scale: pdfRenderScale * (currentZoom / 100)});
+
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        page.render({
+            canvasContext: ctx,
+            viewport: viewport
+        }).promise.then(function() {
+            document.getElementById('currentPage').textContent = pageNum;
+        });
+    });
+}
+
+function showPDFFallback() {
+    const container = document.querySelector('.pdf-viewer-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="error-state" style="padding:2rem;text-align:center;">
+                <i class="fas fa-exclamation-triangle" style="font-size:3rem;color:#e53e3e;"></i>
+                <h3>PDF无法预览</h3>
+                <p>请尝试以下方式查看：</p>
+                <a href="${pdfUrl}" target="_blank" class="btn btn-primary">在新窗口打开</a>
+                <a href="${pdfUrl}" download class="btn btn-secondary">直接下载</a>
             </div>
         `;
     }
@@ -237,13 +277,10 @@ function zoomOut() {
 
 // 更新缩放
 function updateZoom() {
-    const pdfEmbed = document.getElementById('pdfEmbed');
-    pdfEmbed.style.transform = `scale(${currentZoom / 100})`;
-    pdfEmbed.style.transformOrigin = '0 0';
-    pdfEmbed.style.width = `${100 / (currentZoom / 100)}%`;
-    pdfEmbed.style.height = `${700 / (currentZoom / 100)}px`;
-    
     document.getElementById('zoomLevel').textContent = `${currentZoom}%`;
+    if (pdfDoc) {
+        renderPage(pdfCurrentPage);
+    }
 }
 
 // 适应宽度
@@ -258,39 +295,40 @@ function fitPage() {
     updateZoom();
 }
 
+// 上一页
+function prevPage() {
+    if (pdfCurrentPage > 1) {
+        pdfCurrentPage--;
+        renderPage(pdfCurrentPage);
+    }
+}
+
+// 下一页
+function nextPage() {
+    if (pdfCurrentPage < pdfTotalPages) {
+        pdfCurrentPage++;
+        renderPage(pdfCurrentPage);
+    }
+}
+
 // 打印PDF
 function printPDF() {
-    try {
-        window.open(pdfUrl, '_blank');
-    } catch (error) {
-        console.error('打印PDF失败:', error);
-        alert('打印PDF失败: ' + error.message);
-    }
+    window.open(pdfUrl, '_blank');
 }
 
 // 下载PDF
 function downloadPDF() {
-    try {
-        const link = document.createElement('a');
-        link.href = pdfUrl;
-        link.download = `${currentStandardId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } catch (error) {
-        console.error('下载PDF失败:', error);
-        alert('下载PDF失败: ' + error.message);
-    }
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `${currentStandardId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 // 新窗口打开PDF
 function newWindowPDF() {
-    try {
-        window.open(pdfUrl, '_blank');
-    } catch (error) {
-        console.error('新窗口打开失败:', error);
-        alert('新窗口打开失败: ' + error.message);
-    }
+    window.open(pdfUrl, '_blank');
 }
 
 // 加载关联SOP

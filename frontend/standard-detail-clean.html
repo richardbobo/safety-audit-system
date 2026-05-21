@@ -8,6 +8,8 @@
     <!-- 项目样式 -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- PDF.js 用于跨浏览器PDF渲染 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     
     <style>
         /* 标准详情页面特定样式 */
@@ -317,6 +319,12 @@
                 <!-- PDF查看标签页 -->
                 <div id="pdf-tab" class="tab-content active">
                     <div class="pdf-toolbar">
+                        <button id="prevPageBtn" onclick="prevPage()">
+                            <i class="fas fa-chevron-left"></i> 上一页
+                        </button>
+                        <button id="nextPageBtn" onclick="nextPage()">
+                            下一页 <i class="fas fa-chevron-right"></i>
+                        </button>
                         <button id="zoomInBtn">
                             <i class="fas fa-search-plus"></i> 放大
                         </button>
@@ -326,19 +334,16 @@
                         <button id="fitWidthBtn">
                             <i class="fas fa-arrows-alt-h"></i> 适应宽度
                         </button>
-                        <button id="fitPageBtn">
-                            <i class="fas fa-expand-alt"></i> 适应页面
-                        </button>
                         <button id="printBtn">
                             <i class="fas fa-print"></i> 打印
                         </button>
                         <div class="pdf-page-info">
-                            缩放: <span id="zoomLevel">100%</span>
+                            第 <span id="currentPage">1</span> / <span id="pageNumber">0</span> 页 | 缩放: <span id="zoomLevel">100%</span>
                         </div>
                     </div>
-                    
+
                     <div class="pdf-viewer-container">
-                        <iframe id="pdfEmbed" class="pdf-embed" src="about:blank"></iframe>
+                        <canvas id="pdfCanvas" style="max-width:100%;margin:0 auto;display:block;"></canvas>
                     </div>
                 </div>
                 
