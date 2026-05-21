@@ -14,7 +14,7 @@ def get_db_connection():
     """获取数据库连接"""
     import os
     from pathlib import Path
-    db_path = Path("E:/openclaw/projects/safety-audit-system/data/safety_audit.db")
+    db_path = Path(__file__).parent.parent / "data" / "safety_audit.db"
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row  # 返回字典格式的行
     return conn

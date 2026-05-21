@@ -204,16 +204,6 @@ async def get_all_sops():
         if conn:
             conn.close()
         raise HTTPException(status_code=500, detail=f"获取SOP列表失败: {str(e)}")
-        
-        return {
-            "status": "success",
-            "message": f"成功获取 {len(result)} 条SOP记录",
-            "data": result
-        }
-        
-    except Exception as e:
-        conn.close()
-        raise HTTPException(status_code=500, detail=f"获取SOP列表失败: {str(e)}")
 
 @app.get("/api/sops/search")
 async def search_sops(
@@ -337,10 +327,6 @@ async def search_sops(
             "data": result
         }
         
-    except Exception as e:
-        if conn:
-            conn.close()
-        raise HTTPException(status_code=500, detail=f"搜索SOP失败: {str(e)}")
     except Exception as e:
         if conn:
             conn.close()

@@ -18,7 +18,7 @@ class DashboardAPI:
             possible_paths = [
                 "data/safety_audit.db",
                 "../data/safety_audit.db",
-                "E:/openclaw/projects/safety-audit-system/data/safety_audit.db"
+                os.path.join(os.path.dirname(__file__), "..", "data", "safety_audit.db")
             ]
             for path in possible_paths:
                 if os.path.exists(path):

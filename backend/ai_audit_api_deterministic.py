@@ -161,7 +161,7 @@ def call_deepseek_api_deterministic(prompt: str, max_tokens: int = 3000) -> Dict
     
     # 确定性参数配置
     data = {
-        "model": "deepseek-chat",
+        "model": "deepseek-v4-pro",
         "messages": [
             {"role": "system", "content": "你是一个安全审核专家，专门分析安全操作规程的合规性。请确保审核结果客观、一致、可重复。"},
             {"role": "user", "content": prompt}
@@ -171,6 +171,8 @@ def call_deepseek_api_deterministic(prompt: str, max_tokens: int = 3000) -> Dict
         "top_p": 0.9,           # 控制词汇选择范围
         "frequency_penalty": 0, # 不惩罚高频词
         "presence_penalty": 0,  # 不惩罚新词
+        "thinking": {"type": "enabled"},
+        "reasoning_effort": "high",
         "stream": False
     }
     
@@ -425,31 +427,91 @@ def supplement_audit_items(existing_items: List[Dict], standards: List[Dict], so
     
     return supplemented_items
 
-# 结构化审核提示
-def create_structured_audit_prompt(sop_content: str, standards: List[Dict]) -> str:
-    """创建结构化的审核提示，确保输出一致性"""
+# 结构化审核提示 - 增强版
+def create_structured_audit_prompt(sop_content: str, standards: List[Dict], sop_info: Dict = None) -> str:
+    """
+    创建结构化的审核提示
+    使用完整的内容传递给DeepSeek，不截断，充分发挥其大上下文能力
+    """
     
-    # 构建标准列表
+    # --- SOP 元信息 ---
+    sop_meta = ""
+    if sop_info:
+        sop_meta += f"**SOP名称**: {sop_info.get('name', '未知')}\n"
+        sop_meta += f"**SOP编号**: {sop_info.get('id', '未知')}\n"
+        sop_meta += f"**版本**: {sop_info.get('version', '未知')}\n"
+        dpt = sop_info.get('department', '')
+        if dpt:
+            sop_meta += f"**所属部门**: {dpt}\n"
+        cat = sop_info.get('category', '')
+        if cat:
+            sop_meta += f"**类别**: {cat}\n"
+        fs = sop_info.get('file_size', 0)
+        if fs:
+            from math import log
+            size_str = f"{fs/1024:.1f} KB" if fs < 1024*1024 else f"{fs/1024/1024:.1f} MB"
+            sop_meta += f"**文件大小**: {size_str}\n"
+    
+    # --- 标准详细信息（包含完整内容）---
     standards_text = ""
     for i, standard in enumerate(standards, 1):
         standard_no = standard.get('standard_no', standard.get('code', f'标准{i}'))
         standard_name = standard.get('name', standard.get('standard_name', '未知标准'))
-        standard_desc = standard.get('description', standard.get('desc', '无描述'))
+        standard_desc = standard.get('description', standard.get('desc', ''))
+        standard_id = standard.get('id', '')
         
-        standards_text += f"{i}. {standard_no} - {standard_name}\n"
-        standards_text += f"   要求: {standard_desc}\n\n"
+        # 标准基本元信息
+        standards_text += f"{'='*60}\n"
+        standards_text += f"### 技术标准 {i}: {standard_no} - {standard_name}\n"
+        standards_text += f"**标准ID**: {standard_id}\n"
+        cat = standard.get('category', '')
+        if cat:
+            standards_text += f"**类别**: {cat}\n"
+        eff = standard.get('effective_date', '')
+        if eff:
+            standards_text += f"**生效日期**: {eff}\n"
+        
+        # 标准的全文描述
+        if standard_desc:
+            standards_text += f"\n**标准要求/描述**:\n{standard_desc}\n"
+        
+        # 尝试从标准文件PDF中提取更详细的内容
+        standard_file = standard.get('file_path', '')
+        if standard_file:
+            try:
+                from pathlib import Path
+                std_path = resolve_file_path(standard_file)
+                if std_path.exists():
+                    std_pdf = extract_pdf_content(std_path)
+                    if std_pdf.get('success', False) and std_pdf.get('content', '').strip():
+                        std_full = std_pdf.get('content', '').strip()
+                        if len(std_full) > 100:  # 确实有实质性内容
+                            standards_text += f"\n**标准全文内容**:\n{std_full}\n\n"
+            except Exception as e:
+                pass  # 静默失败，不阻塞主流程
+        
+        standards_text += f"{'='*60}\n\n"
     
+    # 完整传递SOP内容，无截断
     prompt = f"""
 # 安全操作规程AI智能审核任务
 
-## 审核要求
 你是一个专业的安全审核专家。请对以下安全操作规程进行逐条详细审核。
 
-### 1. 需要审核的技术标准
+## SOP 基本信息
+{sop_meta}
+
+## 需要审核的技术标准（共 {len(standards)} 个）
+以下是与本SOP关联的技术标准，包含完整的标准要求内容，请仔细阅读每个标准的各项条款：
+
 {standards_text}
 
-### 2. 被审核的安全操作规程内容
-{sop_content[:5000]}...
+## 被审核的安全操作规程完整内容
+以下是SOP的全部内容，请逐条与上述技术标准进行对比审核：
+
+{sop_content}
+
+--- SOP内容结束 ---
 
 ## 核心审核指令（必须严格遵守）
 1. **逐条审核**：对每个技术标准进行逐条款审核，不能只做整体评价
@@ -770,15 +832,19 @@ def execute_audit_task(task_id: str, sop_id: str, force_new: bool = False):
         task.progress = 50
         task.updated_at = datetime.now()
         
-        # 创建结构化审核提示
-        audit_prompt = create_structured_audit_prompt(sop_content, standards)
+        print(f"SOP内容长度: {len(sop_content)} 字符")
+        print(f"关联标准数量: {len(standards)} 个")
+        
+        # 创建结构化审核提示（传递完整内容和SOP元信息）
+        audit_prompt = create_structured_audit_prompt(sop_content, standards, sop_info)
+        print(f"审核提示总长度: {len(audit_prompt)} 字符")
         
         task.step = "调用AI审核"
         task.progress = 60
         task.updated_at = datetime.now()
         
-        # 调用DeepSeek API
-        ai_response = call_deepseek_api_deterministic(audit_prompt, max_tokens=4000)
+        # 调用DeepSeek API（大上下文，大输出量）
+        ai_response = call_deepseek_api_deterministic(audit_prompt, max_tokens=8192)
         
         if not ai_response or 'choices' not in ai_response or not ai_response['choices']:
             task.status = "failed"
