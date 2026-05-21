@@ -1918,7 +1918,18 @@
                     
                     const response = await fetch(statusUrl);
                     console.log('响应状态:', response.status, response.statusText);
-                    
+
+                    if (response.status === 404) {
+                        // 任务不存在（服务重启后丢失），停止轮询并清除本地存储
+                        console.log('任务已过期（404），停止轮询');
+                        clearInterval(intervalId);
+                        const activeTasks = JSON.parse(localStorage.getItem('activeAuditTasks') || '{}');
+                        delete activeTasks[currentSopId];
+                        localStorage.setItem('activeAuditTasks', JSON.stringify(activeTasks));
+                        showAuditError('审核任务已过期，请重新启动AI审核');
+                        return;
+                    }
+
                     if (!response.ok) {
                         throw new Error(`获取任务状态失败 (${response.status})`);
                     }
@@ -3131,7 +3142,7 @@
                     
                     if (response.ok) {
                         const taskStatus = await response.json();
-                        
+
                         if (taskStatus.status === 'running' || taskStatus.status === 'pending') {
                             console.log('任务仍在进行中，显示进度条');
                             // 显示进度界面
@@ -3145,6 +3156,12 @@
                             localStorage.setItem('activeAuditTasks', JSON.stringify(activeTasks));
                             return false;
                         }
+                    } else if (response.status === 404) {
+                        // 任务不存在（服务重启后丢失），清除过期的本地存储
+                        console.log('任务已过期（404），清除本地存储:', taskId);
+                        delete activeTasks[currentSopId];
+                        localStorage.setItem('activeAuditTasks', JSON.stringify(activeTasks));
+                        return false;
                     }
                 }
             } catch (error) {

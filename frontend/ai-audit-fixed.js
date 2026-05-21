@@ -23,27 +23,26 @@ async function checkAIEngine() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        try {
-            // 修复：使用正确的健康检查端点 /health 而不是 /api/ai-audit/health
-            const response = await fetch(`${AI_AUDIT_API}/health`, {
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            
-            const data = await response.json();
-            
-            const aiReadyElement = document.getElementById('ai-ready');
-            if (aiReadyElement) {
-                if (data.status === 'healthy') {
-                    aiReadyElement.textContent = '就绪';
-                    aiReadyElement.style.color = '#10b981';
-                    
-                    // 更新统计
+        // 修复：使用正确的健康检查端点 /health 而不是 /api/ai-audit/health
+        const response = await fetch(`${AI_AUDIT_API}/health`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const data = await response.json();
+
+        const aiReadyElement = document.getElementById('ai-ready');
+        if (aiReadyElement) {
+            if (data.status === 'healthy') {
+                aiReadyElement.textContent = '就绪';
+                aiReadyElement.style.color = '#10b981';
+
+                // 更新统计
                 const sopCountElement = document.getElementById('sop-count');
                 if (sopCountElement) {
                     sopCountElement.textContent = data.sop_count || 0;
                 }
-                
+
                 if (!data.api_key_configured) {
                     showMessage('warning', 'DeepSeek API密钥未配置，AI审核功能将受限。请设置DEEPSEEK_API_KEY环境变量。');
                 } else {
