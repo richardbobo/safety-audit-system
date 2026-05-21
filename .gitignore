@@ -33,8 +33,7 @@ wheels/
 *.db
 !data/safety_audit.db
 
-# 上传文件
-data/uploads/*
+# 上传文件 — 已启用Git跟踪（用于跨服务器部署）
 
 # IDE文件
 .vscode/
