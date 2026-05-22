@@ -708,6 +708,11 @@
         function displayStandards(standards) {
             const container = document.getElementById('standardsList');
             const emptyMessage = document.getElementById('noStandardsMessage');
+
+            if (!container || !emptyMessage) {
+                console.warn('displayStandards: 必要的DOM元素未找到');
+                return;
+            }
             
             if (standards.length === 0) {
                 container.innerHTML = '';
@@ -3003,6 +3008,11 @@
         function showMockStandards() {
             const container = document.getElementById('standardsList');
             const emptyMessage = document.getElementById('noStandardsMessage');
+
+            if (!container || !emptyMessage) {
+                console.warn('showMockStandards: 必要的DOM元素未找到');
+                return;
+            }
             
             const mockStandards = [
                 {
