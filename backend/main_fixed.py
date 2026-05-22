@@ -738,7 +738,10 @@ async def get_sop_pdf_content(sop_id: str, preview: bool = True):
             }
         
         file_path = sop_data[0]
-        
+        # 统一路径分隔符，兼容跨平台部署
+        if file_path:
+            file_path = file_path.replace('\\', '/')
+
         # 从文件路径中提取文件名
         file_name = os.path.basename(file_path) if file_path else "未知文件"
         
@@ -859,16 +862,18 @@ async def get_standard_pdf_content(standard_id: str, preview: bool = True):
         
         standard_data = cursor.fetchone()
         conn.close()
-        
+
         if not standard_data:
             return {
                 "status": "error",
                 "message": f"未找到标准: {standard_id}",
                 "data": None
             }
-        
+
         file_path = standard_data[0]
-        
+        if file_path:
+            file_path = file_path.replace('\\', '/')
+
         if not file_path:
             return {
                 "status": "error",
@@ -1033,6 +1038,8 @@ def resolve_file_path(file_path: str) -> str:
     """解析文件路径，尝试多种可能性"""
     if not file_path:
         return None
+    # 统一路径分隔符，兼容Windows→Mac/Linux部署
+    file_path = file_path.replace('\\', '/')
     
     if os.path.isabs(file_path):
         return file_path

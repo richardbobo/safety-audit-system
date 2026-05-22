@@ -57,8 +57,10 @@ def resolve_file_path(file_path_str: str) -> Path:
     """解析文件路径"""
     if not file_path_str:
         raise ValueError("文件路径为空")
-    
+
     file_path_str = file_path_str.strip()
+    # 统一路径分隔符，兼容Windows→Mac/Linux部署
+    file_path_str = file_path_str.replace('\\', '/')
     
     if os.path.isabs(file_path_str):
         return Path(file_path_str)
