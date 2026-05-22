@@ -1,34 +1,24 @@
 // API配置
 const API_CONFIG = {
-    // 开发环境：本地服务器
     development: {
         baseUrl: 'http://localhost:8000',
         apiPrefix: '/api'
     },
-    // 生产环境：实际部署地址
     production: {
-        baseUrl: 'https://your-production-domain.com',
+        baseUrl: 'http://localhost:8000',
         apiPrefix: '/api'
     }
 };
 
-// 自动检测环境
+// 自动检测当前访问域名，适配远程部署
 function getApiConfig() {
-    const currentProtocol = window.location.protocol;
-    const currentHost = window.location.host;
-    
-    // 强制使用开发环境（因为后端在localhost:8000）
-    // 这样可以避免file://协议访问时的问题
-    return API_CONFIG.development;
-    
-    // 原来的逻辑保留但不使用
-    // // 如果是file://协议或localhost，使用开发环境
-    // if (currentProtocol === 'file:' || currentHost.includes('localhost') || currentHost.includes('127.0.0.1')) {
-    //     return API_CONFIG.development;
-    // }
-    // 
-    // // 否则使用生产环境
-    // return API_CONFIG.production;
+    const origin = window.location.origin;
+    // 如果是 localhost 或 file:// 则用本地地址，否则用当前域名
+    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1') || origin === 'null') {
+        return { baseUrl: 'http://localhost:8000', apiPrefix: '/api' };
+    }
+    // 远程访问：使用当前域名（由Nginx/Cloudflare代理）
+    return { baseUrl: origin, apiPrefix: '/api' };
 }
 
 // 获取API基础URL

@@ -502,6 +502,15 @@
         // 全局变量
         let currentSopId = '';
         let currentSopData = null;
+
+        // AI审核API地址 - 自动检测域名
+        function getAIAuditApiUrl() {
+            var hn = window.location.hostname;
+            if (hn === 'localhost' || hn === '127.0.0.1' || window.location.protocol === 'file:') {
+                return 'http://localhost:8002';
+            }
+            return window.location.origin + '/ai-audit';
+        }
         
         // 页面加载完成后执行
         document.addEventListener('DOMContentLoaded', function() {
@@ -1512,7 +1521,7 @@
                 showAuditInterface();
                 
                 // 直接调用增强版API，不跳转到其他页面
-                const apiUrl = 'http://localhost:8002/api/ai-audit/start';
+                const apiUrl = getAIAuditApiUrl() + '/api/ai-audit/start';
                 console.log('启动AI审核，API地址:', apiUrl);
                 
                 const requestBody = {
@@ -1913,7 +1922,7 @@
                 console.log(`轮询第 ${attempts} 次，任务ID: ${taskId}`);
                 
                 try {
-                    const statusUrl = `http://localhost:8002/api/ai-audit/status/${taskId}`;
+                    const statusUrl = getAIAuditApiUrl() + '/api/ai-audit/status/' + taskId;
                     console.log('轮询URL:', statusUrl);
                     
                     const response = await fetch(statusUrl);
@@ -2030,7 +2039,7 @@
             try {
                 showStatus('正在加载审核详情...', 'info');
                 
-                const apiUrl = `http://localhost:8002/api/ai-audit/status/${taskId}`;
+                const apiUrl = getAIAuditApiUrl() + '/api/ai-audit/status/' + taskId;
                 const response = await fetch(apiUrl);
                 
                 if (!response.ok) {
@@ -3074,7 +3083,7 @@
                 }
 
                 // 尝试获取最新的AI审核记录
-                const apiUrl = `http://localhost:8002/api/ai-audit/history?sop_id=${currentSopId}&limit=1`;
+                const apiUrl = getAIAuditApiUrl() + '/api/ai-audit/history?sop_id=' + currentSopId + '&limit=1';
                 console.log('查询审核历史API:', apiUrl);
 
                 const response = await fetch(apiUrl, { signal: AbortSignal.timeout(5000) });
@@ -3092,7 +3101,7 @@
                         console.log('显示最新审核结果');
                         // 注意: 历史记录API返回的数据结构与任务结果不同
                         // 历史记录缺少 audit_result.itemized_audit，需要从完整状态获取
-                        const statusUrl = `http://localhost:8002/api/ai-audit/status/${latestAudit.id || latestAudit.task_id || ''}`;
+                        const statusUrl = getAIAuditApiUrl() + '/api/ai-audit/status/' + (latestAudit.id || latestAudit.task_id || '');
                         try {
                             const statusResp = await fetch(statusUrl, { signal: AbortSignal.timeout(3000) });
                             if (statusResp.ok) {
@@ -3137,7 +3146,7 @@
                     console.log('发现正在进行的审核任务:', taskId);
                     
                     // 检查任务状态
-                    const statusUrl = `http://localhost:8002/api/ai-audit/status/${taskId}`;
+                    const statusUrl = getAIAuditApiUrl() + '/api/ai-audit/status/' + taskId;
                     const response = await fetch(statusUrl, { signal: AbortSignal.timeout(3000) });
                     
                     if (response.ok) {

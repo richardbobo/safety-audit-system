@@ -5,7 +5,7 @@
 
 class DashboardManager {
     constructor() {
-        this.apiBaseUrl = window.API_BASE_URL || 'http://localhost:8000';
+        this.apiBaseUrl = window.API_BASE_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8000' : window.location.origin);
         this.charts = {};
         this.currentFilters = {
             timeRange: 'month',

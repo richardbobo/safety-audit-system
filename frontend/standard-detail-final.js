@@ -6,9 +6,11 @@ let currentStandard = null;
 let pdfUrl = null;
 let currentZoom = 100;
 
-// API配置
+// API配置 - 自动检测域名
 const API_CONFIG = {
-    baseUrl: 'http://localhost:8000'
+    baseUrl: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:8000'
+        : window.location.origin
 };
 
 // 页面加载时初始化

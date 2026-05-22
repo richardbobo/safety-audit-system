@@ -1,8 +1,9 @@
 // AI审核系统修复版 - JavaScript部分
 
-// API配置
-const API_BASE = 'http://localhost:8000';
-const AI_AUDIT_API = 'http://localhost:8002';
+// API配置 - 自动检测域名，适配本地和远程部署
+const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+const API_BASE = IS_LOCAL ? 'http://localhost:8000' : window.location.origin;
+const AI_AUDIT_API = IS_LOCAL ? 'http://localhost:8002' : (window.location.origin + '/ai-audit');
 
 // 全局状态
 let currentAuditTask = null;
