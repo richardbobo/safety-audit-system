@@ -4,7 +4,7 @@ AI智能审核API服务 - 确定性版本
 修复AI审核结果随机性问题，确保每次审核结果一致
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -30,6 +30,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Cloudflare Tunnel路径前缀剥离（/ai-audit/* → 剥掉前缀）
+@app.middleware("http")
+async def strip_ai_audit_prefix(request: Request, call_next):
+    path = request.scope["path"]
+    if path.startswith("/ai-audit"):
+        request.scope["path"] = path[len("/ai-audit"):]
+        request.scope["root_path"] = "/ai-audit"
+    response = await call_next(request)
+    return response
 
 # 静态文件服务
 static_dir = Path(__file__).parent / "static"
