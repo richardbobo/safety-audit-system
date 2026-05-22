@@ -1816,12 +1816,12 @@ async def get_pdf_file(standard_id: str):
         file_path = standard_data[0]
         if not file_path:
             raise HTTPException(status_code=404, detail=f"标准 {standard_id} 没有关联PDF文件")
-        
+
+        # 统一路径分隔符，兼容跨平台部署
+        file_path = file_path.replace('\\', '/')
+
         # 提取文件名
-        if '\\' in file_path or '/' in file_path:
-            file_name = os.path.basename(file_path)
-        else:
-            file_name = file_path
+        file_name = os.path.basename(file_path) if '/' in file_path else file_path
         
         # 构建实际文件路径
         base_dir = os.path.dirname(__file__)
