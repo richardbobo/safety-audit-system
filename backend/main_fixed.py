@@ -3,10 +3,10 @@
 修复版本：解决API路由注册问题
 """
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from typing import List, Optional
 import os
@@ -32,6 +32,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# /ai-audit/* 请求代理到AI审核服务(8002)，适配Cloudflare Tunnel单端口部署
+@app.middleware("http")
+async def proxy_ai_audit(request: Request, call_next):
+    if request.url.path.startswith("/ai-audit"):
+        try:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                target_url = f"http://127.0.0.1:8002{request.url.path}"
+                if request.url.query:
+                    target_url += f"?{request.url.query}"
+                method = request.method
+                body = await request.body() if method in ("POST", "PUT", "PATCH") else None
+                headers = dict(request.headers)
+                headers.pop("host", None)
+                headers.pop("content-length", None)
+                resp = await client.request(method, target_url, content=body, headers=headers)
+                return Response(
+                    content=resp.content,
+                    status_code=resp.status_code,
+                    headers=dict(resp.headers),
+                    media_type=resp.headers.get("content-type")
+                )
+        except Exception as e:
+            return Response(
+                content=f'{{"error":"AI audit service unavailable: {str(e)}"}}',
+                status_code=502,
+                media_type="application/json"
+            )
+    return await call_next(request)
 
 # 挂载静态文件目录
 frontend_dir = os.path.join(os.path.dirname(__file__), "../frontend")
